@@ -15,7 +15,8 @@
             "cwd": "${workspaceFolder}/korenan.AppHost",
             // 'console' フィールドの詳細については、https://aka.ms/VSCode-CS-LaunchJson-Console を参照してください
             "console": "internalConsole",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "launchSettingsProfile": "http"
         },
         {
             "name": ".NET Core Attach",
