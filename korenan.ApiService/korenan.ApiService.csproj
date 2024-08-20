@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.17.1" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.17.1-alpha" />
   </ItemGroup>
 
 </Project>

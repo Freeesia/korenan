@@ -16,7 +16,8 @@
             // 'console' フィールドの詳細については、https://aka.ms/VSCode-CS-LaunchJson-Console を参照してください
             "console": "internalConsole",
             "stopAtEntry": false,
-            "launchSettingsProfile": "http"
+            "launchSettingsProfile": "http",
+            "envFile": "${workspaceFolder}/.env"
         },
         {
             "name": ".NET Core Attach",

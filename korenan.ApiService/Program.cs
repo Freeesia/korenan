@@ -1,3 +1,5 @@
+using Microsoft.SemanticKernel;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire components.
@@ -5,6 +7,10 @@ builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
+
+var (modelId, apiKey) = builder.Configuration.Get<SemanticKernelOptions>()!;
+builder.Services.AddKernel()
+    .AddGoogleAIGeminiChatCompletion(modelId, apiKey);
 
 var app = builder.Build();
 
@@ -37,3 +43,5 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
+record SemanticKernelOptions(string ModelId, string ApiKey);
