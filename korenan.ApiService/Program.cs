@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
 using Microsoft.SemanticKernel.Plugins.Web.Bing;
@@ -18,8 +19,8 @@ builder.Services.AddProblemDetails();
 
 var (modelId, apiKey, bingKey) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
 var kernelBuikder = builder.Services.AddKernel()
-    .AddGoogleAIGeminiChatCompletion(modelId, apiKey);
-
+    .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
+    .AddGoogleAIEmbeddingGeneration(modelId, apiKey);
 builder.Services
     .AddHttpClient()
     .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
@@ -39,6 +40,16 @@ var summaries = new[]
 };
 var quiz = new Quiz();
 
+var geminiSettings = new GeminiPromptExecutionSettings()
+{
+    SafetySettings =
+    [
+        new(GeminiSafetyCategory.Harassment, GeminiSafetyThreshold.BlockNone),
+        new(GeminiSafetyCategory.DangerousContent, GeminiSafetyThreshold.BlockNone),
+        new(new("HARM_CATEGORY_HATE_SPEECH"), GeminiSafetyThreshold.BlockNone),
+    ],
+};
+
 app.MapGet("/weatherforecast", () =>
 {
     var forecast = Enumerable.Range(1, 5).Select(index =>
@@ -52,6 +63,8 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 });
 
+app.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
+
 app.MapPost("/target", async ([FromServices] Kernel kernel, [FromBody] string target) =>
 {
     quiz.Correct = target;
@@ -63,7 +76,7 @@ app.MapPost("/target", async ([FromServices] Kernel kernel, [FromBody] string ta
 
 app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string input) =>
 {
-    var questionFunc = kernel.CreateFunctionFromPrompt(new PromptTemplateConfig("""
+    var questionPrompt = new PromptTemplateConfig("""
         あなたは文章の校正を行うアシスタントです。
         与えられた対象と質問をつなげて、対象に対する質問文を作成してください。
 
@@ -90,10 +103,12 @@ app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string 
         Name = "question",
         Description = "「対象」と「質問」から対象に対する質問文を生成する",
         InputVariables = [new() { Name = "input", IsRequired = true, Description = "質問" }, new() { Name = "target", IsRequired = true, Description = "対象" }],
-    });
+    };
+    questionPrompt.AddExecutionSettings(geminiSettings);
+    var questionFunc = kernel.CreateFunctionFromPrompt(questionPrompt);
     kernel.ImportPluginFromFunctions("question", [questionFunc]);
-    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input);
-    var result = await kernel.InvokePromptAsync("""
+    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
+    var prompt = new PromptTemplateConfig("""
         次の参考情報を基にして、ユーザーの質問に回答してください。
         
         ## 参考情報
@@ -115,8 +130,11 @@ app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string 
             "reason": "判断の理由",
             "answer": "`yes`、`no`、`unanswerable`のいずれかの回答"
         }
-        """,
-    new() { ["correct"] = quiz.Correct, ["input"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+        """);
+    prompt.AddExecutionSettings(geminiSettings);
+    var result = await kernel.InvokeAsync(
+        kernel.CreateFunctionFromPrompt(prompt),
+        new() { ["correct"] = quiz.Correct, ["input"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
 
     return result.GetFromJson<QuestionResponse>();
 });
@@ -127,8 +145,8 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
     {
         return new AnswerResponse("完全一致", AnswerResponseType.Correct);
     }
-    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input);
-    var result = await kernel.InvokePromptAsync("""
+    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
+    var prompt = new PromptTemplateConfig("""
         次の情報を基にして、ユーザーの回答がクイズの正解に対してどのような関係にあるかを判断してください。
 
         ## 正解
@@ -160,8 +178,11 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
             "reason": "判断の理由",
             "answer": "`correct`、`more_specific`、`incorrect`のいずれかの回答"
         }
-        """,
-    new() { ["correct"] = quiz.Correct, ["answer"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+        """);
+    prompt.AddExecutionSettings(geminiSettings);
+    var result = await kernel.InvokeAsync(
+        kernel.CreateFunctionFromPrompt(prompt),
+        new() { ["correct"] = quiz.Correct, ["answer"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
 
     return result.GetFromJson<AnswerResponse>();
 });
@@ -197,9 +218,9 @@ static class Extensions
         }
     };
 
-    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target)
+    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, PromptExecutionSettings settings)
     {
-        var keywordsFunc = kernel.CreateFunctionFromPrompt(new PromptTemplateConfig("""
+        var ptompt = new PromptTemplateConfig("""
         対象の2つの単語、文章の関係性を検索エンジンで調査するためのキーワードを生成してください。
 
         ## 対象
@@ -220,7 +241,9 @@ static class Extensions
         {
             Name = "keywords",
             InputVariables = [new() { Name = "correct" }, new() { Name = "target" }],
-        });
+        };
+        ptompt.AddExecutionSettings(settings);
+        var keywordsFunc = kernel.CreateFunctionFromPrompt(ptompt);
         return await keywordsFunc.InvokeAsync<string>(kernel, new() { ["correct"] = correct, ["target"] = target }) ?? string.Empty;
     }
 

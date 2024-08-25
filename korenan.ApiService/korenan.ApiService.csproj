@@ -9,7 +9,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
+    <PackageReference Include="CXuesong.MW.MwParserFromScratch" Version="0.2.1" />
     <PackageReference Include="Genbox.Wikipedia" Version="4.0.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.64" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.18.0-rc" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.18.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.18.0-alpha" />
