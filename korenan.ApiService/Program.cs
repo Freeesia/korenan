@@ -1,4 +1,12 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using korenan.ApiService;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Plugins.Core;
+using Microsoft.SemanticKernel.Plugins.Web;
+using Microsoft.SemanticKernel.Plugins.Web.Bing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,9 +16,17 @@ builder.AddServiceDefaults();
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
-var (modelId, apiKey) = builder.Configuration.Get<SemanticKernelOptions>()!;
-builder.Services.AddKernel()
+var (modelId, apiKey, bingKey) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
+var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey);
+
+builder.Services
+    .AddHttpClient()
+    .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+    .AddSingleton<IWebSearchEngineConnector>(sp => new BingConnector(bingKey, sp.GetRequiredService<HttpClient>(), loggerFactory: sp.GetService<ILoggerFactory>()))
+    .AddSingleton(sp => KernelPluginFactory.CreateFromType<WebSearchEnginePlugin>("search", sp))
+    .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
+    .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp));
 
 var app = builder.Build();
 
@@ -21,6 +37,7 @@ var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
+var quiz = new Quiz();
 
 app.MapGet("/weatherforecast", () =>
 {
@@ -35,6 +52,120 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 });
 
+app.MapPost("/target", async ([FromServices] Kernel kernel, [FromBody] string target) =>
+{
+    quiz.Correct = target;
+    quiz.CorrectInfo = string.Join(Environment.NewLine, [
+        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = target }),
+        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = target })
+        ]);
+});
+
+app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string input) =>
+{
+    var questionFunc = kernel.CreateFunctionFromPrompt(new PromptTemplateConfig("""
+        あなたは文章の校正を行うアシスタントです。
+        与えられた対象と質問をつなげて、対象に対する質問文を作成してください。
+
+        ## 対象
+        {{$target}}
+
+        ## 質問
+        {{$input}}
+
+        ### 例
+        * 対象: 「東京」
+        * 質問: 「首都ですか？」
+        * 出力: 「東京は首都ですか？」
+
+        * 対象: 「犬」
+        * 質問: 「生き物？」
+        * 出力: 「犬は生き物ですか？」
+
+        * 対象: 「日本」
+        * 質問: 「それは生き物ですか」
+        * 出力: 「日本は生き物ですか？」
+        """)
+    {
+        Name = "question",
+        Description = "「対象」と「質問」から対象に対する質問文を生成する",
+        InputVariables = [new() { Name = "input", IsRequired = true, Description = "質問" }, new() { Name = "target", IsRequired = true, Description = "対象" }],
+    });
+    kernel.ImportPluginFromFunctions("question", [questionFunc]);
+    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input);
+    var result = await kernel.InvokePromptAsync("""
+        次の参考情報を基にして、ユーザーの質問に回答してください。
+        
+        ## 参考情報
+        {{ $correctInfo }}
+        {{ search $keywords }}
+              
+        ## ユーザーの質問
+        {{ question intput=$intput target=$correct }}
+        
+        ## 回答の指針
+        * 参考情報内に、質問に対して明確に肯定される内容があれば`yes`と回答してください。
+        * 参考情報内に、質問に対して明確に否定される内容があれば`no`と回答してください。
+        * 参考情報内に、質問に回答可能な情報が含まれていない場合は`no`と回答してください。
+        * 質問が「はい」「いいえ」で回答できない開いた質問の場合は`unanswerable`と回答してください。
+        
+        ## 出力の様式
+        以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
+        {
+            "reason": "判断の理由",
+            "answer": "`yes`、`no`、`unanswerable`のいずれかの回答"
+        }
+        """,
+    new() { ["correct"] = quiz.Correct, ["input"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+
+    return result.GetFromJson<QuestionResponse>();
+});
+
+app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string input) =>
+{
+    if (input == quiz.Correct)
+    {
+        return new AnswerResponse("完全一致", AnswerResponseType.Correct);
+    }
+    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input);
+    var result = await kernel.InvokePromptAsync("""
+        次の情報を基にして、ユーザーの回答がクイズの正解に対してどのような関係にあるかを判断してください。
+
+        ## 正解
+        {{ $correct }}
+
+        ## ユーザーの回答
+        {{ $answer }}
+
+        ## 正解に関する参考情報
+        {{ $correctInfo }}
+
+        ## 回答に関する参考情報
+        {{ search $answer }}
+        {{ wiki.Search $answer }}
+        
+        ## 正解と回答の関係性に関する参考情報
+        {{ search $keywords }}
+
+        ## 判断および出力の指針
+        1. 正解と回答が完全一致している場合は`correct`と出力してください。
+        2. 正解と回答が完全一致していないが、表記揺れなど参考情報を元に回答が正解と必要十分に同一であると判断できる場合は`correct`と出力してください。
+        3. 正解と回答が一致しないが、回答が正解の一部であり、回答が正解の十分条件を満たす場合は`correct`と出力してください。
+        4. 正解と回答が一致しないが、正解が回答の一部であり、回答が正解の必要条件を満たすが、十分条件を満たさない場合は`more_specific`と出力してください。
+        5. 上記のいずれにも当てはまらない場合は`incorrect`と出力してください。
+
+        ## 出力の様式
+        以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
+        {
+            "reason": "判断の理由",
+            "answer": "`correct`、`more_specific`、`incorrect`のいずれかの回答"
+        }
+        """,
+    new() { ["correct"] = quiz.Correct, ["answer"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+
+    return result.GetFromJson<AnswerResponse>();
+});
+
 app.MapDefaultEndpoints();
 
 app.Run();
@@ -44,4 +175,62 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
 
-record SemanticKernelOptions(string ModelId, string ApiKey);
+record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey);
+record QuestionResponse(string Reason, QuestionResponseType Answer);
+enum QuestionResponseType { Yes, No, Unanswerable }
+record AnswerResponse(string Reason, AnswerResponseType Answer);
+enum AnswerResponseType { Correct, MoreSpecific, Incorrect }
+class Quiz
+{
+    public string Correct { get; set; }
+    public string CorrectInfo { get; set; }
+}
+
+static class Extensions
+{
+    private static readonly JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Converters =
+        {
+            new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower),
+        }
+    };
+
+    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target)
+    {
+        var keywordsFunc = kernel.CreateFunctionFromPrompt(new PromptTemplateConfig("""
+        対象の2つの単語、文章の関係性を検索エンジンで調査するためのキーワードを生成してください。
+
+        ## 対象
+        * {{$correct}}
+        * {{$target}}
+
+        ### 例
+        * 対象: 「東京」「首都ですか？」
+        * キーワード: 「東京 首都 かどうか」
+        * 対象: 「犬」「生き物？」
+        * キーワード: 「犬 生き物 かどうか」
+        * 対象: 「日本」「生き物」
+        * キーワード: 「日本 生き物 かどうか」
+
+        キーワードはスペース区切りで質問に対する回答を得ることができるような検索エンジンへ渡す情報を出力してください。
+        キーワード以外の情報は出力しないでください。
+        """)
+        {
+            Name = "keywords",
+            InputVariables = [new() { Name = "correct" }, new() { Name = "target" }],
+        });
+        return await keywordsFunc.InvokeAsync<string>(kernel, new() { ["correct"] = correct, ["target"] = target }) ?? string.Empty;
+    }
+
+    public static T GetFromJson<T>(this FunctionResult result)
+    {
+        var json = result.GetValue<string>()!.Trim('`', '\n');
+        if (!json.StartsWith('{'))
+        {
+            json = json[json.IndexOf('{')..];
+        }
+        return JsonSerializer.Deserialize<T>(json, jsonOptions)!;
+    }
+}
