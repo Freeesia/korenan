@@ -128,7 +128,7 @@ app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string 
         以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
         {
             "reason": "判断の理由",
-            "answer": "`yes`、`no`、`unanswerable`のいずれかの回答"
+            "result": "`yes`、`no`、`unanswerable`のいずれかの回答"
         }
         """);
     prompt.AddExecutionSettings(geminiSettings);
@@ -136,14 +136,20 @@ app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string 
         kernel.CreateFunctionFromPrompt(prompt),
         new() { ["correct"] = quiz.Correct, ["input"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
 
-    return result.GetFromJson<QuestionResponse>();
+    var res = result.GetFromJson<QuestionResponse>();
+    quiz.Histories.Add(new(new QuestionResult(input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    return res.Result;
 });
+
+app.MapGet("/history", () => quiz.Histories.Select(h => h.Result));
+app.MapGet("/history/internal", () => quiz.Histories);
 
 app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string input) =>
 {
     if (input == quiz.Correct)
     {
-        return new AnswerResponse("完全一致", AnswerResponseType.Correct);
+        quiz.Histories.Add(new(new AnswerResult(input, AnswerResultType.Correct), "完全一致", string.Empty));
+        return AnswerResultType.Correct;
     }
     var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
@@ -176,7 +182,7 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
         以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
         {
             "reason": "判断の理由",
-            "answer": "`correct`、`more_specific`、`incorrect`のいずれかの回答"
+            "result": "`correct`、`more_specific`、`incorrect`のいずれかの回答"
         }
         """);
     prompt.AddExecutionSettings(geminiSettings);
@@ -184,7 +190,9 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
         kernel.CreateFunctionFromPrompt(prompt),
         new() { ["correct"] = quiz.Correct, ["answer"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
 
-    return result.GetFromJson<AnswerResponse>();
+    var res = result.GetFromJson<AnswerResponse>();
+    quiz.Histories.Add(new(new AnswerResult(input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    return res.Result;
 });
 
 app.MapDefaultEndpoints();
@@ -197,15 +205,22 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 }
 
 record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey);
-record QuestionResponse(string Reason, QuestionResponseType Answer);
-enum QuestionResponseType { Yes, No, Unanswerable }
-record AnswerResponse(string Reason, AnswerResponseType Answer);
-enum AnswerResponseType { Correct, MoreSpecific, Incorrect }
+record QuestionResponse(string Reason, QuestionResultType Result);
+enum QuestionResultType { Yes, No, Unanswerable }
+record AnswerResponse(string Reason, AnswerResultType Result);
+enum AnswerResultType { Correct, MoreSpecific, Incorrect }
 class Quiz
 {
     public string Correct { get; set; }
     public string CorrectInfo { get; set; }
+    public List<HistoryInfo> Histories { get; } = [];
 }
+record HistoryInfo(IResult Result, string Reason, string Prompt);
+[JsonDerivedType(typeof(QuestionResult))]
+[JsonDerivedType(typeof(AnswerResult))]
+interface IResult;
+record QuestionResult(string Question, QuestionResultType Result) : IResult;
+record AnswerResult(string Answer, AnswerResultType Result) : IResult;
 
 static class Extensions
 {
