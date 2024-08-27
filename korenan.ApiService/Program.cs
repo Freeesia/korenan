@@ -153,7 +153,8 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
     }
     var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
-        次の情報を基にして、ユーザーの回答がクイズの正解に対してどのような関係にあるかを判断してください。
+        あなたはクイズの出題者であり、ユーザーからの回答の正誤を判断する専門家です。
+        参考情報を基にして、ユーザーの回答がクイズの正解に対して同一かどうかを判断してください。
 
         ## 正解
         {{ $correct }}
@@ -194,6 +195,20 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
     quiz.Histories.Add(new(new AnswerResult(input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
     return res.Result;
 });
+
+#if DEBUG
+app.MapGet("/debug", () => new[]
+{
+    new HistoryInfo(new QuestionResult("東京", QuestionResultType.Yes), "東京は首都ですか？", "東京は日本の首都です。"),
+    new HistoryInfo(new AnswerResult("東京", AnswerResultType.Correct), "完全一致", string.Empty),
+    new HistoryInfo(new QuestionResult("犬", QuestionResultType.No), "犬は生き物ですか？", "犬は生き物です。"),
+    new HistoryInfo(new AnswerResult("犬", AnswerResultType.Correct), "完全一致", string.Empty),
+    new HistoryInfo(new QuestionResult("日本", QuestionResultType.Unanswerable), "日本は生き物ですか？", "日本は国です。"),
+    new HistoryInfo(new AnswerResult("日本", AnswerResultType.Correct), "完全一致", string.Empty),
+    new HistoryInfo(new QuestionResult("東京", QuestionResultType.Yes), "東京は首都ですか？", "東京は日本の首都です。"),
+    new HistoryInfo(new AnswerResult("東京", AnswerResultType.Correct), "完全一致", string.Empty),
+});
+#endif
 
 app.MapDefaultEndpoints();
 

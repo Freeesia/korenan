@@ -7,6 +7,10 @@
     <UserSecretsId>1d2c3151-5ec1-4cef-9902-fd918ab2f16c</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup Condition="'$(Condition)' == 'Debug'">
+    <PackageReference Include="Bogus" Version="35.6.0" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
     <PackageReference Include="CXuesong.MW.MwParserFromScratch" Version="0.2.1" />
