@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using GoogleTrendsApi;
 using korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.SemanticKernel;
@@ -8,6 +9,7 @@ using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
 using Microsoft.SemanticKernel.Plugins.Web.Bing;
+using GoogleTrends = GoogleTrendsApi.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -208,6 +210,12 @@ app.MapGet("/debug", () => new[]
     new HistoryInfo(new QuestionResult("“Œ‹ž", QuestionResultType.Yes), "“Œ‹ž‚ÍŽñ“s‚Å‚·‚©H", "“Œ‹ž‚Í“ú–{‚ÌŽñ“s‚Å‚·B"),
     new HistoryInfo(new AnswerResult("“Œ‹ž", AnswerResultType.Correct), "Š®‘Sˆê’v", string.Empty),
 });
+app.MapGet("/trends/InterestOverTime", () => GoogleTrends.GetInterestOverTimeTyped([string.Empty], GeoId.Japan, DateOptions.LastMonth, GroupOptions.All, hl: "ja"));
+app.MapGet("/trends/TrendingSearches", () => GoogleTrends.GetTrendingSearches("japan"));
+app.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("JP"));
+app.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo:"JP"));
+app.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo:"JP", hl:"ja"));
+app.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo:"JP"));
 #endif
 
 app.MapDefaultEndpoints();

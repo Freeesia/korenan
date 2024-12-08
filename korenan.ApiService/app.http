@@ -7,7 +7,7 @@ GET {{base}}/wiki?keyword=ブッキー
 ###
 POST {{base}}/target
 Content-Type: application/json
-"キュアパイン"
+"ミッキーマウス"
 
 ###
 
@@ -19,13 +19,19 @@ Content-Type: application/json
 
 POST {{base}}/question
 Content-Type: application/json
-"男性？"
+"場所ですか？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"子供ですか？"
+"物ですか？"
+
+###
+
+POST {{base}}/question
+Content-Type: application/json
+"食べ物？"
 
 ###
 
@@ -37,31 +43,25 @@ Content-Type: application/json
 
 POST {{base}}/question
 Content-Type: application/json
-"プリキュアの登場人物？"
+"ディズニーに関係ある？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"中学2年生？"
-
-###
-
-POST {{base}}/question
-Content-Type: application/json
-"黄色がテーマカラー？"
+"1950年以降の作品？"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
-"キュアパイン"
+"ミッキーマウス"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
-"キュアレモネード"
+"ミニーマウス"
 
 ###
 
@@ -80,3 +80,39 @@ Content-Type: application/json
 POST {{base}}/answer
 Content-Type: application/json
 "山吹祈里"
+
+###
+
+GET {{base}}/history
+
+###
+
+GET {{base}}/history/internal
+
+### 
+
+GET {{base}}/debug
+
+### 
+
+GET {{base}}/trends/InterestOverTime
+
+### 
+
+GET {{base}}/trends/TrendingSearches
+
+### 
+
+GET {{base}}/trends/RealtimeSearches
+
+### 
+
+GET {{base}}/trends/TopCharts
+
+### 
+
+GET {{base}}/trends/TodaySearches
+
+### 
+
+GET {{base}}/trends/RelatedQueries
