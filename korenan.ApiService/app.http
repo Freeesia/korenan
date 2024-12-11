@@ -3,6 +3,9 @@
 
 GET {{base}}/wiki?keyword=ブッキー
 
+###
+
+GET {{base}}/search?keyword=ブッキー
 
 ###
 POST {{base}}/target
