@@ -1,0 +1,6 @@
+@korenan.react.Server_HostAddress = http://localhost:5080
+
+GET {{korenan.react.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

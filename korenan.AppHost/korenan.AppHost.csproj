@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -11,11 +11,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\korenan.ApiService\korenan.ApiService.csproj" />
+    <ProjectReference Include="..\korenan.react\korenan.react.Server\korenan.react.Server.csproj" />
     <ProjectReference Include="..\korenan.Web\korenan.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" Version="9.0.0" />
+    <PackageReference Include="Aspire.Hosting.NodeJs" Version="9.0.0" />
   </ItemGroup>
 
 </Project>

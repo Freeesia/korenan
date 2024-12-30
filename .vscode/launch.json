@@ -16,7 +16,10 @@
             // 'console' フィールドの詳細については、https://aka.ms/VSCode-CS-LaunchJson-Console を参照してください
             "console": "internalConsole",
             "stopAtEntry": false,
-            "launchSettingsProfile": "http",
+            "launchSettingsProfile": "https",
+            "launchBrowser": {
+                "enabled": true,
+            },
             "envFile": "${workspaceFolder}/.env"
         },
         {
