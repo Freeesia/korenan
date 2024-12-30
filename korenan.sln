@@ -10,9 +10,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "korenan.ApiService", "koren
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "korenan.Web", "korenan.Web\korenan.Web.csproj", "{113711BF-EFC5-4EF4-BA08-88965CD9CF3D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "korenan.react.Server", "korenan.react\korenan.react.Server\korenan.react.Server.csproj", "{DCE11996-4ACE-4C06-AADA-AD4365BB6089}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "korenan.react.Server", "korenan.react.Server\korenan.react.Server.csproj", "{DCE11996-4ACE-4C06-AADA-AD4365BB6089}"
 EndProject
-Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "korenan.react.client", "korenan.react\korenan.react.client\korenan.react.client.esproj", "{B8F678A7-C00F-4B17-AE2D-4F870FAF4A22}"
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "korenan.react.client", "korenan.react.client\korenan.react.client.esproj", "{B8F678A7-C00F-4B17-AE2D-4F870FAF4A22}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

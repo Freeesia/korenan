@@ -8,7 +8,7 @@ builder.AddProject<Projects.korenan_Web>("webfrontend")
 
 var weatherApi = builder.AddProject<Projects.korenan_react_Server>("korenan-react-server");
 
-builder.AddNpmApp("react", "../korenan.react/korenan.react.client", "dev")
+builder.AddNpmApp("react", "../korenan.react.client", "dev")
     .WithReference(weatherApi)
     .WaitFor(weatherApi)
     .WithEnvironment("BROWSER", "none") // Disable opening browser on npm start

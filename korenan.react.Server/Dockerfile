@@ -19,11 +19,11 @@ RUN apt-get -y install nodejs
 FROM with-node AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["korenan.react/korenan.react.Server/korenan.react.Server.csproj", "korenan.react/korenan.react.Server/"]
+COPY ["korenan.react.Server/korenan.react.Server.csproj", "korenan.react.Server/"]
 COPY ["korenan.react.client/korenan.react.client.esproj", "korenan.react.client/"]
-RUN dotnet restore "./korenan.react/korenan.react.Server/korenan.react.Server.csproj"
+RUN dotnet restore "./korenan.react.Server/korenan.react.Server.csproj"
 COPY . .
-WORKDIR "/src/korenan.react/korenan.react.Server"
+WORKDIR "/src/korenan.react.Server"
 RUN dotnet build "./korenan.react.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # このステージは、最終ステージにコピーするサービス プロジェクトを公開するために使用されます

@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
     <ProjectReference Include="..\korenan.react.client\korenan.react.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
