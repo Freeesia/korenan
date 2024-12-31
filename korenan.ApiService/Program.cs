@@ -60,7 +60,7 @@ var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
-var quiz = new Quiz();
+var game = new Game([], [], GameScene.RegistTopic, new());
 
 var geminiSettings = new GeminiPromptExecutionSettings()
 {
@@ -85,21 +85,32 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 });
 
-app.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
-
-app.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
-
-app.MapPost("/target", async ([FromServices] Kernel kernel, [FromBody] string target) =>
+// プレイヤー・お題登録
+app.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
 {
-    quiz.Correct = target;
-    quiz.CorrectInfo = string.Join(Environment.NewLine, [
-        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = target }),
-        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = target })
-        ]);
+    var player = new Player(context.Session.Id, req.Name, req.Topic) { CurrentScene = GameScene.WaitRoundStart };
+    game.Players.Add(player);
 });
 
-app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string input) =>
+// ラウンド開始
+app.MapPost("/start", async ([FromServices] Kernel kernel) =>
 {
+    var topics = game.Players.Select(p => p.Topic).Except(game.Rounds.Select(r => r.Topic)).ToArray();
+    var topic = topics[Random.Shared.Next(topics.Length)];
+    var topicInfo = string.Join(Environment.NewLine, [
+        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = topic }),
+        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = topic }),
+        ]);
+    var round = new Round(topic, topicInfo, []);
+    game.Rounds.Add(round);
+    game = game with { CurrentScene = GameScene.QuestionAnswering };
+});
+
+// 質問と回答
+app.MapPost("/question", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
+{
+    var round = game.Rounds.Last();
+    var player = game.Players.First(p => p.Id == context.Session.Id);
     var questionPrompt = new PromptTemplateConfig("""
         あなたは文章の校正を行うアシスタントです。
         与えられた対象と質問をつなげて、対象に対する質問文を作成してください。
@@ -131,23 +142,23 @@ app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string 
     questionPrompt.AddExecutionSettings(geminiSettings);
     var questionFunc = kernel.CreateFunctionFromPrompt(questionPrompt);
     kernel.ImportPluginFromFunctions("question", [questionFunc]);
-    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
         次の参考情報を基にして、ユーザーの質問に回答してください。
-        
+
         ## 参考情報
-        {{ $correctInfo }}
+        {{ $topicInfo }}
         {{ search $keywords }}
-              
+
         ## ユーザーの質問
-        {{ question intput=$intput target=$correct }}
-        
+        {{ question intput=$intput target=$topic }}
+
         ## 回答の指針
         * 参考情報内に、質問に対して明確に肯定される内容があれば`yes`と回答してください。
         * 参考情報内に、質問に対して明確に否定される内容があれば`no`と回答してください。
         * 参考情報内に、質問に回答可能な情報が含まれていない場合は`no`と回答してください。
         * 質問が「はい」「いいえ」で回答できない開いた質問の場合は`unanswerable`と回答してください。
-        
+
         ## 出力の様式
         以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
         {
@@ -158,24 +169,29 @@ app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string 
     prompt.AddExecutionSettings(geminiSettings);
     var result = await kernel.InvokeAsync(
         kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["correct"] = quiz.Correct, ["input"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+        new() { ["correct"] = round.Topic, ["input"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<QuestionResponse>();
-    quiz.Histories.Add(new(new QuestionResult(input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    round.Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
     return res.Result;
 });
 
-app.MapGet("/history", () => quiz.Histories.Select(h => h.Result));
-app.MapGet("/history/internal", () => quiz.Histories);
+app.MapGet("/round/{i}/history", ([FromRoute] int i) => game.Rounds[i].Histories.Select(h => h.Result));
+app.MapGet("/round/{i}/history/internal", ([FromRoute] int i) => game.Rounds[i].Histories);
 
-app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string input) =>
+// ユーザーの解答と結果
+app.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
 {
-    if (input == quiz.Correct)
+    var round = game.Rounds.Last();
+    var player = game.Players.First(p => p.Id == context.Session.Id);
+    if (input == round.Topic)
     {
-        quiz.Histories.Add(new(new AnswerResult(input, AnswerResultType.Correct), "完全一致", string.Empty));
+        round.Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty));
+        player.Points += game.Config.CorrectPoint;
+        game = game with { CurrentScene = GameScene.LiarPlayerGuessing };
         return AnswerResultType.Correct;
     }
-    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
         あなたはクイズの出題者であり、ユーザーからの回答の正誤を判断する専門家です。
         参考情報を基にして、ユーザーの回答がクイズの正解に対して同一かどうかを判断してください。
@@ -192,7 +208,7 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
         ## 回答に関する参考情報
         {{ search $answer }}
         {{ wiki.Search $answer }}
-        
+
         ## 正解と回答の関係性に関する参考情報
         {{ search $keywords }}
 
@@ -213,35 +229,28 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
     prompt.AddExecutionSettings(geminiSettings);
     var result = await kernel.InvokeAsync(
         kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["correct"] = quiz.Correct, ["answer"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+        new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<AnswerResponse>();
-    quiz.Histories.Add(new(new AnswerResult(input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    round.Histories.Add(new(new AnswerResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    if (res.Result == AnswerResultType.Correct)
+    {
+        player.Points += game.Config.CorrectPoint;
+        game = game with { CurrentScene = GameScene.LiarPlayerGuessing };
+    }
     return res.Result;
 });
 
 #if DEBUG
-app.MapGet("/debug", () => new[]
-{
-    new HistoryInfo(new QuestionResult("東京", QuestionResultType.Yes), "東京は首都ですか？", "東京は日本の首都です。"),
-    new HistoryInfo(new AnswerResult("東京", AnswerResultType.Correct), "完全一致", string.Empty),
-    new HistoryInfo(new QuestionResult("犬", QuestionResultType.No), "犬は生き物ですか？", "犬は生き物です。"),
-    new HistoryInfo(new AnswerResult("犬", AnswerResultType.Correct), "完全一致", string.Empty),
-    new HistoryInfo(new QuestionResult("日本", QuestionResultType.Unanswerable), "日本は生き物ですか？", "日本は国です。"),
-    new HistoryInfo(new AnswerResult("日本", AnswerResultType.Correct), "完全一致", string.Empty),
-    new HistoryInfo(new QuestionResult("東京", QuestionResultType.Yes), "東京は首都ですか？", "東京は日本の首都です。"),
-    new HistoryInfo(new AnswerResult("東京", AnswerResultType.Correct), "完全一致", string.Empty),
-});
+app.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
+app.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
 app.MapGet("/trends/InterestOverTime", () => GoogleTrends.GetInterestOverTimeTyped([string.Empty], GeoId.Japan, DateOptions.LastMonth, GroupOptions.All, hl: "ja"));
 app.MapGet("/trends/TrendingSearches", () => GoogleTrends.GetTrendingSearches("japan"));
 app.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("JP"));
 app.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
 app.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
 app.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
-app.MapGet("/user", async ([FromServices] ISession sesstion) =>
-{
-    return sesstion.Id;
-});
+app.MapGet("/user", (HttpContext context) => context.Session.Id);
 #endif
 
 
@@ -253,24 +262,11 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+record RegistRequest(string Name, string Topic);
 
 record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, GoogleSearchParam GoogleSearch);
 record QuestionResponse(string Reason, QuestionResultType Result);
-enum QuestionResultType { Yes, No, Unanswerable }
 record AnswerResponse(string Reason, AnswerResultType Result);
-enum AnswerResultType { Correct, MoreSpecific, Incorrect }
-class Quiz
-{
-    public string Correct { get; set; }
-    public string CorrectInfo { get; set; }
-    public List<HistoryInfo> Histories { get; } = [];
-}
-record HistoryInfo(IResult Result, string Reason, string Prompt);
-[JsonDerivedType(typeof(QuestionResult))]
-[JsonDerivedType(typeof(AnswerResult))]
-interface IResult;
-record QuestionResult(string Question, QuestionResultType Result) : IResult;
-record AnswerResult(string Answer, AnswerResultType Result) : IResult;
 
 static class Extensions
 {
