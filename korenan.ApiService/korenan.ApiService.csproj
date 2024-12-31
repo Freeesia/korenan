@@ -9,7 +9,7 @@
     <DockerfileContext>..\..</DockerfileContext>
     <SpaRoot>..\korenan.react.client</SpaRoot>
     <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
-    <SpaProxyServerUrl>https://localhost:64247</SpaProxyServerUrl>
+    <SpaProxyServerUrl>https://localhost:5173</SpaProxyServerUrl>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(Condition)' == 'Debug'">

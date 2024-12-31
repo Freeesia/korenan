@@ -32,12 +32,29 @@ builder.Services
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
     .AddEndpointsApiExplorer()
-    .AddSwaggerGen();
+    .AddSwaggerGen()
+    .AddDistributedMemoryCache()
+    .AddSession(op =>
+    {
+        op.IdleTimeout = TimeSpan.FromDays(30);
+        op.Cookie.HttpOnly = true;
+        op.Cookie.IsEssential = true;
+    });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseSession();
 
 var summaries = new[]
 {
@@ -221,17 +238,12 @@ app.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("J
 app.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
 app.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
 app.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
+app.MapGet("/user", async ([FromServices] ISession sesstion) =>
+{
+    return sesstion.Id;
+});
 #endif
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 app.MapDefaultEndpoints();
 app.MapFallbackToFile("/index.html");
