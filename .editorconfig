@@ -1,5 +1,9 @@
-[*.cs]
+[*]
+charset = utf-8
+insert_final_newline = true
 
+[*.cs]
+end_of_line = crlf
 dotnet_diagnostic.SKEXP0001.severity = none
 dotnet_diagnostic.SKEXP0050.severity = none
 dotnet_diagnostic.SKEXP0070.severity = none

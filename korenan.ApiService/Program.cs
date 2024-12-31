@@ -82,58 +82,58 @@ app.MapPost("/target", async ([FromServices] Kernel kernel, [FromBody] string ta
 app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string input) =>
 {
     var questionPrompt = new PromptTemplateConfig("""
-        ���Ȃ��͕��͂̍Z�����s���A�V�X�^���g�ł��B
-        �^����ꂽ�ΏۂƎ�����Ȃ��āA�Ώۂɑ΂��鎿�╶���쐬���Ă��������B
+        あなたは文章の校正を行うアシスタントです。
+        与えられた対象と質問をつなげて、対象に対する質問文を作成してください。
 
-        ## �Ώ�
+        ## 対象
         {{$target}}
 
-        ## ����
+        ## 質問
         {{$input}}
 
-        ### ��
-        * �Ώ�: �u�����v
-        * ����: �u��s�ł����H�v
-        * �o��: �u�����͎�s�ł����H�v
+        ### 例
+        * 対象: 「東京」
+        * 質問: 「首都ですか？」
+        * 出力: 「東京は首都ですか？」
 
-        * �Ώ�: �u���v
-        * ����: �u�������H�v
-        * �o��: �u���͐������ł����H�v
+        * 対象: 「犬」
+        * 質問: 「生き物？」
+        * 出力: 「犬は生き物ですか？」
 
-        * �Ώ�: �u���{�v
-        * ����: �u����͐������ł����v
-        * �o��: �u���{�͐������ł����H�v
+        * 対象: 「日本」
+        * 質問: 「それは生き物ですか」
+        * 出力: 「日本は生き物ですか？」
         """)
     {
         Name = "question",
-        Description = "�u�Ώہv�Ɓu����v����Ώۂɑ΂��鎿�╶�𐶐�����",
-        InputVariables = [new() { Name = "input", IsRequired = true, Description = "����" }, new() { Name = "target", IsRequired = true, Description = "�Ώ�" }],
+        Description = "「対象」と「質問」から対象に対する質問文を生成する",
+        InputVariables = [new() { Name = "input", IsRequired = true, Description = "質問" }, new() { Name = "target", IsRequired = true, Description = "対象" }],
     };
     questionPrompt.AddExecutionSettings(geminiSettings);
     var questionFunc = kernel.CreateFunctionFromPrompt(questionPrompt);
     kernel.ImportPluginFromFunctions("question", [questionFunc]);
     var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
-        ���̎Q�l������ɂ��āA���[�U�[�̎���ɉ񓚂��Ă��������B
+        次の参考情報を基にして、ユーザーの質問に回答してください。
         
-        ## �Q�l���
+        ## 参考情報
         {{ $correctInfo }}
         {{ search $keywords }}
               
-        ## ���[�U�[�̎���
+        ## ユーザーの質問
         {{ question intput=$intput target=$correct }}
         
-        ## �񓚂̎w�j
-        * �Q�l�����ɁA����ɑ΂��Ė��m�ɍm�肳�����e�������`yes`�Ɖ񓚂��Ă��������B
-        * �Q�l�����ɁA����ɑ΂��Ė��m�ɔے肳�����e�������`no`�Ɖ񓚂��Ă��������B
-        * �Q�l�����ɁA����ɉ񓚉\�ȏ�񂪊܂܂�Ă��Ȃ��ꍇ��`no`�Ɖ񓚂��Ă��������B
-        * ���₪�u�͂��v�u�������v�ŉ񓚂ł��Ȃ��J��������̏ꍇ��`unanswerable`�Ɖ񓚂��Ă��������B
+        ## 回答の指針
+        * 参考情報内に、質問に対して明確に肯定される内容があれば`yes`と回答してください。
+        * 参考情報内に、質問に対して明確に否定される内容があれば`no`と回答してください。
+        * 参考情報内に、質問に回答可能な情報が含まれていない場合は`no`と回答してください。
+        * 質問が「はい」「いいえ」で回答できない開いた質問の場合は`unanswerable`と回答してください。
         
-        ## �o�̗͂l��
-        �ȉ���Json�t�H�[�}�b�g�ɂ��������āA����ɑ΂��ĉ񓚂𓱂��o�������R�ƂƂ��ɉ񓚂��o�͂��Ă��������B
+        ## 出力の様式
+        以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
         {
-            "reason": "���f�̗��R",
-            "result": "`yes`�A`no`�A`unanswerable`�̂����ꂩ�̉�"
+            "reason": "判断の理由",
+            "result": "`yes`、`no`、`unanswerable`のいずれかの回答"
         }
         """);
     prompt.AddExecutionSettings(geminiSettings);
@@ -153,42 +153,42 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
 {
     if (input == quiz.Correct)
     {
-        quiz.Histories.Add(new(new AnswerResult(input, AnswerResultType.Correct), "���S��v", string.Empty));
+        quiz.Histories.Add(new(new AnswerResult(input, AnswerResultType.Correct), "完全一致", string.Empty));
         return AnswerResultType.Correct;
     }
     var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
-        ���Ȃ��̓N�C�Y�̏o��҂ł���A���[�U�[����̉񓚂̐���𔻒f������Ƃł��B
-        �Q�l������ɂ��āA���[�U�[�̉񓚂��N�C�Y�̐����ɑ΂��ē��ꂩ�ǂ����𔻒f���Ă��������B
+        あなたはクイズの出題者であり、ユーザーからの回答の正誤を判断する専門家です。
+        参考情報を基にして、ユーザーの回答がクイズの正解に対して同一かどうかを判断してください。
 
-        ## ����
+        ## 正解
         {{ $correct }}
 
-        ## ���[�U�[�̉�
+        ## ユーザーの回答
         {{ $answer }}
 
-        ## �����Ɋւ���Q�l���
+        ## 正解に関する参考情報
         {{ $correctInfo }}
 
-        ## �񓚂Ɋւ���Q�l���
+        ## 回答に関する参考情報
         {{ search $answer }}
         {{ wiki.Search $answer }}
         
-        ## �����Ɖ񓚂̊֌W���Ɋւ���Q�l���
+        ## 正解と回答の関係性に関する参考情報
         {{ search $keywords }}
 
-        ## ���f����яo�͂̎w�j
-        1. �����Ɖ񓚂����S��v���Ă���ꍇ��`correct`�Əo�͂��Ă��������B
-        2. �����Ɖ񓚂����S��v���Ă��Ȃ����A�\�L�h��ȂǎQ�l�������ɉ񓚂������ƕK�v�\���ɓ���ł���Ɣ��f�ł���ꍇ��`correct`�Əo�͂��Ă��������B
-        3. �����Ɖ񓚂���v���Ȃ����A�񓚂������̈ꕔ�ł���A�񓚂������̏\�������𖞂����ꍇ��`correct`�Əo�͂��Ă��������B
-        4. �����Ɖ񓚂���v���Ȃ����A�������񓚂̈ꕔ�ł���A�񓚂������̕K�v�����𖞂������A�\�������𖞂����Ȃ��ꍇ��`more_specific`�Əo�͂��Ă��������B
-        5. ��L�̂�����ɂ����Ă͂܂�Ȃ��ꍇ��`incorrect`�Əo�͂��Ă��������B
+        ## 判断および出力の指針
+        1. 正解と回答が完全一致している場合は`correct`と出力してください。
+        2. 正解と回答が完全一致していないが、表記揺れなど参考情報を元に回答が正解と必要十分に同一であると判断できる場合は`correct`と出力してください。
+        3. 正解と回答が一致しないが、回答が正解の一部であり、回答が正解の十分条件を満たす場合は`correct`と出力してください。
+        4. 正解と回答が一致しないが、正解が回答の一部であり、回答が正解の必要条件を満たすが、十分条件を満たさない場合は`more_specific`と出力してください。
+        5. 上記のいずれにも当てはまらない場合は`incorrect`と出力してください。
 
-        ## �o�̗͂l��
-        �ȉ���Json�t�H�[�}�b�g�ɂ��������āA����ɑ΂��ĉ񓚂𓱂��o�������R�ƂƂ��ɉ񓚂��o�͂��Ă��������B
+        ## 出力の様式
+        以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
         {
-            "reason": "���f�̗��R",
-            "result": "`correct`�A`more_specific`�A`incorrect`�̂����ꂩ�̉�"
+            "reason": "判断の理由",
+            "result": "`correct`、`more_specific`、`incorrect`のいずれかの回答"
         }
         """);
     prompt.AddExecutionSettings(geminiSettings);
@@ -204,14 +204,14 @@ app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string in
 #if DEBUG
 app.MapGet("/debug", () => new[]
 {
-    new HistoryInfo(new QuestionResult("����", QuestionResultType.Yes), "�����͎�s�ł����H", "�����͓��{�̎�s�ł��B"),
-    new HistoryInfo(new AnswerResult("����", AnswerResultType.Correct), "���S��v", string.Empty),
-    new HistoryInfo(new QuestionResult("��", QuestionResultType.No), "���͐������ł����H", "���͐������ł��B"),
-    new HistoryInfo(new AnswerResult("��", AnswerResultType.Correct), "���S��v", string.Empty),
-    new HistoryInfo(new QuestionResult("���{", QuestionResultType.Unanswerable), "���{�͐������ł����H", "���{�͍��ł��B"),
-    new HistoryInfo(new AnswerResult("���{", AnswerResultType.Correct), "���S��v", string.Empty),
-    new HistoryInfo(new QuestionResult("����", QuestionResultType.Yes), "�����͎�s�ł����H", "�����͓��{�̎�s�ł��B"),
-    new HistoryInfo(new AnswerResult("����", AnswerResultType.Correct), "���S��v", string.Empty),
+    new HistoryInfo(new QuestionResult("東京", QuestionResultType.Yes), "東京は首都ですか？", "東京は日本の首都です。"),
+    new HistoryInfo(new AnswerResult("東京", AnswerResultType.Correct), "完全一致", string.Empty),
+    new HistoryInfo(new QuestionResult("犬", QuestionResultType.No), "犬は生き物ですか？", "犬は生き物です。"),
+    new HistoryInfo(new AnswerResult("犬", AnswerResultType.Correct), "完全一致", string.Empty),
+    new HistoryInfo(new QuestionResult("日本", QuestionResultType.Unanswerable), "日本は生き物ですか？", "日本は国です。"),
+    new HistoryInfo(new AnswerResult("日本", AnswerResultType.Correct), "完全一致", string.Empty),
+    new HistoryInfo(new QuestionResult("東京", QuestionResultType.Yes), "東京は首都ですか？", "東京は日本の首都です。"),
+    new HistoryInfo(new AnswerResult("東京", AnswerResultType.Correct), "完全一致", string.Empty),
 });
 app.MapGet("/trends/InterestOverTime", () => GoogleTrends.GetInterestOverTimeTyped([string.Empty], GeoId.Japan, DateOptions.LastMonth, GroupOptions.All, hl: "ja"));
 app.MapGet("/trends/TrendingSearches", () => GoogleTrends.GetTrendingSearches("japan"));
@@ -262,22 +262,22 @@ static class Extensions
     public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, PromptExecutionSettings settings)
     {
         var ptompt = new PromptTemplateConfig("""
-        �Ώۂ�2�̒P��A���͂̊֌W���������G���W���Œ������邽�߂̃L�[���[�h�𐶐����Ă��������B
+        対象の2つの単語、文章の関係性を検索エンジンで調査するためのキーワードを生成してください。
 
-        ## �Ώ�
+        ## 対象
         * {{$correct}}
         * {{$target}}
 
-        ### ��
-        * �Ώ�: �u�����v�u��s�ł����H�v
-        * �L�[���[�h: �u���� ��s ���ǂ����v
-        * �Ώ�: �u���v�u�������H�v
-        * �L�[���[�h: �u�� ������ ���ǂ����v
-        * �Ώ�: �u���{�v�u�������v
-        * �L�[���[�h: �u���{ ������ ���ǂ����v
+        ### 例
+        * 対象: 「東京」「首都ですか？」
+        * キーワード: 「東京 首都 かどうか」
+        * 対象: 「犬」「生き物？」
+        * キーワード: 「犬 生き物 かどうか」
+        * 対象: 「日本」「生き物」
+        * キーワード: 「日本 生き物 かどうか」
 
-        �L�[���[�h�̓X�y�[�X��؂�Ŏ���ɑ΂���񓚂𓾂邱�Ƃ��ł���悤�Ȍ����G���W���֓n�������o�͂��Ă��������B
-        �L�[���[�h�ȊO�̏��͏o�͂��Ȃ��ł��������B
+        キーワードはスペース区切りで質問に対する回答を得ることができるような検索エンジンへ渡す情報を出力してください。
+        キーワード以外の情報は出力しないでください。
         """)
         {
             Name = "keywords",
