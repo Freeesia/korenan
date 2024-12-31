@@ -5,6 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>1d2c3151-5ec1-4cef-9902-fd918ab2f16c</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..</DockerfileContext>
+    <SpaRoot>..\korenan.react.client</SpaRoot>
+    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
+    <SpaProxyServerUrl>https://localhost:64247</SpaProxyServerUrl>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(Condition)' == 'Debug'">
@@ -12,7 +17,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
+      <Version>8.*-*</Version>
+    </PackageReference>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
     <PackageReference Include="CXuesong.MW.MwParserFromScratch" Version="0.2.1" />
     <PackageReference Include="Genbox.Wikipedia" Version="4.0.0" />
     <PackageReference Include="Google.Apis.CustomSearchAPI.v1" Version="1.68.0.3520" />
@@ -22,4 +31,10 @@
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" Version="1.31.0-alpha" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\korenan.react.client\korenan.react.client.esproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

@@ -6,11 +6,9 @@ builder.AddProject<Projects.korenan_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithReference(apiService);
 
-var weatherApi = builder.AddProject<Projects.korenan_react_Server>("korenan-react-server");
-
 builder.AddNpmApp("react", "../korenan.react.client", "dev")
-    .WithReference(weatherApi)
-    .WaitFor(weatherApi)
+    .WithReference(apiService)
+    .WaitFor(apiService)
     .WithEnvironment("BROWSER", "none") // Disable opening browser on npm start
     .WithHttpsEndpoint(env: "VITE_PORT")
     .WithExternalHttpEndpoints()

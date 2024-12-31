@@ -20,7 +20,8 @@
             "launchBrowser": {
                 "enabled": true,
             },
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "requireExactSource": false
         },
         {
             "name": ".NET Core Attach",

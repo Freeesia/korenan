@@ -30,7 +30,9 @@ builder.Services
     //.AddSingleton<IWebSearchEngineConnector>(sp => new GoogleSearchConnector(googleKey, sp.GetRequiredService<ILogger<GoogleSearchConnector>>()))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WebSearchEnginePlugin>("search", sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
-    .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp));
+    .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -221,8 +223,18 @@ app.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP
 app.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
 #endif
 
-app.MapDefaultEndpoints();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapDefaultEndpoints();
+app.MapFallbackToFile("/index.html");
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
