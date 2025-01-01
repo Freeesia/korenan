@@ -10,78 +10,91 @@ GET {{base}}/search?keyword=ブッキー
 ###
 POST {{base}}/target
 Content-Type: application/json
+
 "ミッキーマウス"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
+
 "人ですか？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
+
 "場所ですか？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
+
 "物ですか？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
+
 "食べ物？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
+
 "アニメのキャラ？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
+
 "ディズニーに関係ある？"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
+
 "1950年以降の作品？"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
+
 "ミッキーマウス"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
+
 "ミニーマウス"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
+
 "キュアサンシャイン"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
+
 "ブッキー"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
+
 "山吹祈里"
 
 ###
@@ -127,7 +140,7 @@ Content-Type: application/json
 
 {
     "name": "Freesia",
-    "topic": "大空スバル"
+    "topic": "ミッキーマウス"
 }
 
 ### ラウンドスタート
