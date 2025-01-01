@@ -72,7 +72,9 @@ var geminiSettings = new GeminiPromptExecutionSettings()
     ],
 };
 
-app.MapGet("/weatherforecast", () =>
+var api = app.MapGroup("/api");
+
+api.MapGet("/weatherforecast", () =>
 {
     var forecast = Enumerable.Range(1, 5).Select(index =>
         new WeatherForecast
@@ -86,14 +88,14 @@ app.MapGet("/weatherforecast", () =>
 });
 
 // プレイヤー・お題登録
-app.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
+api.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
 {
     var player = new Player(context.Session.Id, req.Name, req.Topic) { CurrentScene = GameScene.WaitRoundStart };
     game.Players.Add(player);
 });
 
 // ラウンド開始
-app.MapPost("/start", async ([FromServices] Kernel kernel) =>
+api.MapPost("/start", async ([FromServices] Kernel kernel) =>
 {
     var topics = game.Players.Select(p => p.Topic).Except(game.Rounds.Select(r => r.Topic)).ToArray();
     var topic = topics[Random.Shared.Next(topics.Length)];
@@ -107,7 +109,7 @@ app.MapPost("/start", async ([FromServices] Kernel kernel) =>
 });
 
 // 質問と回答
-app.MapPost("/question", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
+api.MapPost("/question", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
 {
     var round = game.Rounds.Last();
     var player = game.Players.First(p => p.Id == context.Session.Id);
@@ -176,11 +178,11 @@ app.MapPost("/question", async (HttpContext context, [FromServices] Kernel kerne
     return res.Result;
 });
 
-app.MapGet("/round/{i}/history", ([FromRoute] int i) => game.Rounds[i].Histories.Select(h => h.Result));
-app.MapGet("/round/{i}/history/internal", ([FromRoute] int i) => game.Rounds[i].Histories);
+api.MapGet("/round/{i}/history", ([FromRoute] int i) => game.Rounds[i].Histories.Select(h => h.Result));
+api.MapGet("/round/{i}/history/internal", ([FromRoute] int i) => game.Rounds[i].Histories);
 
 // ユーザーの解答と結果
-app.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
+api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
 {
     var round = game.Rounds.Last();
     var player = game.Players.First(p => p.Id == context.Session.Id);
@@ -242,15 +244,15 @@ app.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel,
 });
 
 #if DEBUG
-app.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
-app.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
-app.MapGet("/trends/InterestOverTime", () => GoogleTrends.GetInterestOverTimeTyped([string.Empty], GeoId.Japan, DateOptions.LastMonth, GroupOptions.All, hl: "ja"));
-app.MapGet("/trends/TrendingSearches", () => GoogleTrends.GetTrendingSearches("japan"));
-app.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("JP"));
-app.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
-app.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
-app.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
-app.MapGet("/user", (HttpContext context) => context.Session.Id);
+api.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
+api.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
+api.MapGet("/trends/InterestOverTime", () => GoogleTrends.GetInterestOverTimeTyped([string.Empty], GeoId.Japan, DateOptions.LastMonth, GroupOptions.All, hl: "ja"));
+api.MapGet("/trends/TrendingSearches", () => GoogleTrends.GetTrendingSearches("japan"));
+api.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("JP"));
+api.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
+api.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
+api.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
+api.MapGet("/session", (HttpContext context) => context.Session.Id);
 #endif
 
 
