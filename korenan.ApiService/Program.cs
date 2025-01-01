@@ -90,8 +90,18 @@ api.MapGet("/weatherforecast", () =>
 // プレイヤー・お題登録
 api.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
 {
-    var player = new Player(context.Session.Id, req.Name, req.Topic) { CurrentScene = GameScene.WaitRoundStart };
+    if (context.Session.Get<User>(nameof(User)) is not { } user)
+    {
+        user = new User(Guid.NewGuid(), req.Name);
+        context.Session.Set(nameof(User), user);
+    }
+    if (game.Players.Any(p => p.Id == user.Id))
+    {
+        return Results.BadRequest("You have already registered.");
+    }
+    var player = new Player(user.Id, user.Name, req.Topic) { CurrentScene = GameScene.WaitRoundStart };
     game.Players.Add(player);
+    return Results.Ok(user);
 });
 
 // ラウンド開始
@@ -111,8 +121,9 @@ api.MapPost("/start", async ([FromServices] Kernel kernel) =>
 // 質問と回答
 api.MapPost("/question", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
 {
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var round = game.Rounds.Last();
-    var player = game.Players.First(p => p.Id == context.Session.Id);
+    var player = game.Players.First(p => p.Id == user.Id);
     var questionPrompt = new PromptTemplateConfig("""
         あなたは文章の校正を行うアシスタントです。
         与えられた対象と質問をつなげて、対象に対する質問文を作成してください。
@@ -184,8 +195,9 @@ api.MapGet("/round/{i}/history/internal", ([FromRoute] int i) => game.Rounds[i].
 // ユーザーの解答と結果
 api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
 {
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var round = game.Rounds.Last();
-    var player = game.Players.First(p => p.Id == context.Session.Id);
+    var player = game.Players.First(p => p.Id == user.Id);
     if (input == round.Topic)
     {
         round.Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty));
@@ -252,7 +264,7 @@ api.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("J
 api.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
 api.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
 api.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
-api.MapGet("/session", (HttpContext context) => context.Session.Id);
+api.MapGet("/session", (HttpContext context) => context.Session.Get<User>(nameof(User)) is { } u ? Results.Ok(u) : Results.NotFound());
 #endif
 
 

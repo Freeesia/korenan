@@ -49,7 +49,7 @@ enum GameScene
 /// <param name="Id">プレイヤーID</param>
 /// <param name="Name">プレイヤー名</param>
 /// <param name="Topic">登録したお題</param>
-record Player(string Id, string Name, string Topic)
+record Player(Guid Id, string Name, string Topic)
 {
     /// <summary>
     /// プレイヤーの現在のシーン
@@ -91,7 +91,7 @@ interface IResult;
 /// <param name="Player">質問したプレイヤー</param>
 /// <param name="Question">質問内容</param>
 /// <param name="Result">結果</param>
-record QuestionResult(string Player, string Question, QuestionResultType Result) : IResult;
+record QuestionResult(Guid Player, string Question, QuestionResultType Result) : IResult;
 
 /// <summary>
 /// 質問の結果タイプ
@@ -120,7 +120,7 @@ enum QuestionResultType
 /// <param name="Player">解答したプレイヤー</param>
 /// <param name="Answer">プレイヤーの解答</param>
 /// <param name="Result">結果</param>
-record AnswerResult(string Player, string Answer, AnswerResultType Result) : IResult;
+record AnswerResult(Guid Player, string Answer, AnswerResultType Result) : IResult;
 
 /// <summary>
 /// 解答の結果タイプ

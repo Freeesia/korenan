@@ -1,5 +1,5 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
-@base=https://localhost:7410
+@base=https://localhost:7410/api
 
 GET {{base}}/wiki?keyword=ブッキー
 
@@ -119,3 +119,17 @@ GET {{base}}/trends/RelatedQueries
 ###
 
 GET {{base}}/session
+
+### プレイヤー・トピック登録
+
+POST {{base}}/regist
+Content-Type: application/json
+
+{
+    "name": "Freesia",
+    "topic": "大空スバル"
+}
+
+### ラウンドスタート
+
+POST {{base}}/start
