@@ -13,11 +13,6 @@ record Game(List<Player> Players, List<Round> Rounds, GameScene CurrentScene, Co
 enum GameScene
 {
     /// <summary>
-    /// プレイヤーがトピックを登録するフェーズ
-    /// </summary>
-    RegistTopic,
-
-    /// <summary>
     /// ラウンド開始を待つフェーズ
     /// </summary>
     WaitRoundStart,
@@ -68,7 +63,15 @@ record Player(Guid Id, string Name, string Topic)
 /// <param name="Topic">お題</param>
 /// <param name="TopicInfo">お題の情報</param>
 /// <param name="Histories">履歴</param>
-record Round(string Topic, string TopicInfo, List<HistoryInfo> Histories);
+/// <param name="LiarGuesses">ライアープレイヤーの推理</param>
+record Round(string Topic, string TopicInfo, List<HistoryInfo> Histories, List<LiarGuess> LiarGuesses);
+
+/// <summary>
+/// ライアープレイヤーを推理する対象
+/// </summary>
+/// <param name="Player">推理したプレイヤー</param>
+/// <param name="Target">ライアープレイヤー</param>
+record LiarGuess(Guid Player, Guid Target);
 
 /// <summary>
 /// 履歴情報
@@ -76,14 +79,14 @@ record Round(string Topic, string TopicInfo, List<HistoryInfo> Histories);
 /// <param name="Result">質問もしくは解答の結果</param>
 /// <param name="Reason">結果の判定理由</param>
 /// <param name="Prompt">判定に利用したプロンプト</param>
-record HistoryInfo(IResult Result, string Reason, string Prompt);
+record HistoryInfo(IPlayerResult Result, string Reason, string Prompt);
 
 /// <summary>
 /// 結果のインターフェース
 /// </summary>
 [JsonDerivedType(typeof(QuestionResult))]
 [JsonDerivedType(typeof(AnswerResult))]
-interface IResult;
+interface IPlayerResult;
 
 /// <summary>
 /// 質問の結果
@@ -91,7 +94,7 @@ interface IResult;
 /// <param name="Player">質問したプレイヤー</param>
 /// <param name="Question">質問内容</param>
 /// <param name="Result">結果</param>
-record QuestionResult(Guid Player, string Question, QuestionResultType Result) : IResult;
+record QuestionResult(Guid Player, string Question, QuestionResultType Result) : IPlayerResult;
 
 /// <summary>
 /// 質問の結果タイプ
@@ -120,7 +123,7 @@ enum QuestionResultType
 /// <param name="Player">解答したプレイヤー</param>
 /// <param name="Answer">プレイヤーの解答</param>
 /// <param name="Result">結果</param>
-record AnswerResult(Guid Player, string Answer, AnswerResultType Result) : IResult;
+record AnswerResult(Guid Player, string Answer, AnswerResultType Result) : IPlayerResult;
 
 /// <summary>
 /// 解答の結果タイプ

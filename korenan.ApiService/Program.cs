@@ -60,7 +60,7 @@ var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
-var game = new Game([], [], GameScene.RegistTopic, new());
+var game = new Game([], [], GameScene.WaitRoundStart, new());
 
 var geminiSettings = new GeminiPromptExecutionSettings()
 {
@@ -99,7 +99,7 @@ api.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
     {
         return Results.BadRequest("You have already registered.");
     }
-    var player = new Player(user.Id, user.Name, req.Topic) { CurrentScene = GameScene.WaitRoundStart };
+    var player = new Player(user.Id, user.Name, req.Topic);
     game.Players.Add(player);
     return Results.Ok(user);
 });
@@ -113,7 +113,7 @@ api.MapPost("/start", async ([FromServices] Kernel kernel) =>
         await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = topic }),
         await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = topic }),
         ]);
-    var round = new Round(topic, topicInfo, []);
+    var round = new Round(topic, topicInfo, [], []);
     game.Rounds.Add(round);
     game = game with { CurrentScene = GameScene.QuestionAnswering };
 });
@@ -255,6 +255,75 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel,
     return res.Result;
 });
 
+// 嘘をついているプレイヤーの推理
+api.MapPost("/guess", (HttpContext context, [FromBody] Guid target) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var round = game.Rounds.Last();
+    round.LiarGuesses.Add(new(user.Id, target));
+    if (round.LiarGuesses.Count != game.Players.Count)
+    {
+        return;
+    }
+    var liars = game.Players.Where(p => round.Topic == p.Topic).Select(p => p.Id).ToArray();
+    foreach (var p in game.Players)
+    {
+        var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
+        if (liars.Contains(liar.Target))
+        {
+            p.Points += game.Config.CorrectPoint;
+        }
+    }
+    game = game with { CurrentScene = GameScene.RoundSummary };
+});
+
+// シーン情報取得
+api.MapGet("/scene", () => new CurrentScene(
+    game.CurrentScene,
+    game.Players.Select(p => new User(p.Id, p.Name)).ToArray(),
+    game.CurrentScene switch
+    {
+        GameScene.WaitRoundStart
+            => new WaitRoundSceneInfo(
+                game.Players.Where(p => p.CurrentScene == game.CurrentScene).Count(),
+                game.Rounds.Count + 1),
+        GameScene.QuestionAnswering
+            => new QuestionAnsweringSceneInfo(
+                game.Rounds.Count,
+                game.Rounds.Last().Histories.Select(h => h.Result).ToArray()),
+        GameScene.LiarPlayerGuessing
+            => new LiarPlayerGuessingSceneInfo(
+                game.Rounds.Count,
+                [.. game.Rounds.Last().LiarGuesses]),
+        GameScene.RoundSummary
+            => new RoundSummaryInfo(
+                game.Rounds.Count,
+                game.Rounds.Last()
+                    .Histories
+                    .Select(h => h.Result)
+                    .OfType<AnswerResult>()
+                    .Where(h => h.Result == AnswerResultType.Correct)
+                    .Select(h => h.Player)
+                    .ToArray(),
+                game.Rounds.Last()
+                    .LiarGuesses
+                    .Where(t => t.Target == game.Players.Find(p => p.Topic == game.Rounds.Last().Topic)!.Id)
+                    .Select(t => t.Player)
+                    .ToArray(),
+                game.Players.ToDictionary(p => p.Id, p => p.Points)),
+        GameScene.GameEnd
+            => new GameEndInfo(game.Players.ToDictionary(p => p.Id, p => p.Points)),
+        _ => throw new NotSupportedException(),
+    }));
+
+// プレイヤーのシーン情報更新
+api.MapPost("/scene", (HttpContext context, [FromBody] GameScene scene) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var player = game.Players.First(p => p.Id == user.Id);
+    player.CurrentScene = scene;
+});
+
 #if DEBUG
 api.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
 api.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
@@ -281,6 +350,16 @@ record RegistRequest(string Name, string Topic);
 record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, GoogleSearchParam GoogleSearch);
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
+
+record CurrentScene(GameScene Scene, User[] Users, ISceneInfo Info);
+
+interface ISceneInfo;
+
+record WaitRoundSceneInfo(int Waiting, int NextRound) : ISceneInfo;
+record QuestionAnsweringSceneInfo(int Round, IPlayerResult[] Histories) : ISceneInfo;
+record LiarPlayerGuessingSceneInfo(int Round, LiarGuess[] Targets) : ISceneInfo;
+record RoundSummaryInfo(int Round, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers, IReadOnlyDictionary<Guid, int> Points) : ISceneInfo;
+record GameEndInfo(IReadOnlyDictionary<Guid, int> Points) : ISceneInfo;
 
 static class Extensions
 {
