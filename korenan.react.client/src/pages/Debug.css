@@ -1,0 +1,9 @@
+.api-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.api-section pre {
+  margin-left: 10px;
+}
