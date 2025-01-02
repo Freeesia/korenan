@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, NavLink } from "react-router-dom";
 import "./App.css";
 import Home from "./pages/Home";
 import Weather from "./pages/Weather";
@@ -10,13 +10,13 @@ function App() {
       <nav>
         <ul>
           <li>
-            <Link to="/">Home</Link>
+            <NavLink to="/">Home</NavLink>
           </li>
           <li>
-            <Link to="/weather">Weather</Link>
+            <NavLink to="/weather">Weather</NavLink>
           </li>
           <li>
-            <Link to="/debug">Debug</Link>
+            <NavLink to="/debug">Debug</NavLink>
           </li>
         </ul>
       </nav>
