@@ -5,8 +5,6 @@ import { AnswerResponse, GameScene, Player, QuestionResponse } from "../models";
 function Debug() {
   const [registResponse, setRegistResponse] = useState<Player>();
   const [scene, setScene] = useState<GameScene>();
-  const [startResponse, setStartResponse] = useState(null);
-  const [nextResponse, setNextResponse] = useState(null);
   const [questionResponse, setQuestionResponse] = useState<QuestionResponse>();
   const [answerResponse, setAnswerResponse] = useState<AnswerResponse>();
   const [guessResponse, setGuessResponse] = useState(null);
@@ -36,19 +34,11 @@ function Debug() {
   };
 
   const startRound = async () => {
-    const response = await fetch("/api/start", {
-      method: "POST",
-    });
-    const data = await response.json();
-    setStartResponse(data);
+    fetch("/api/start", { method: "POST" });
   };
 
   const nextRound = async () => {
-    const response = await fetch("/api/next", {
-      method: "POST",
-    });
-    const data = await response.json();
-    setNextResponse(data);
+    await fetch("/api/next", { method: "POST" });
   };
 
   const askQuestion = async () => {
@@ -112,11 +102,9 @@ function Debug() {
       </div>
       <div className="api-section">
         <button onClick={startRound}>Start Round</button>
-        <pre>{JSON.stringify(startResponse, null, 2)}</pre>
       </div>
       <div className="api-section">
         <button onClick={nextRound}>Next Round</button>
-        <pre>{JSON.stringify(nextResponse, null, 2)}</pre>
       </div>
       <div className="api-section">
         <input
