@@ -2,7 +2,6 @@ import { useState } from "react";
 import "./Debug.css";
 
 function Debug() {
-  const [weatherForecast, setWeatherForecast] = useState([]);
   const [registResponse, setRegistResponse] = useState(null);
   const [scene, setScene] = useState(null);
   const [startResponse, setStartResponse] = useState(null);
@@ -10,12 +9,6 @@ function Debug() {
   const [questionResponse, setQuestionResponse] = useState(null);
   const [answerResponse, setAnswerResponse] = useState(null);
   const [guessResponse, setGuessResponse] = useState(null);
-
-  const fetchWeatherForecast = async () => {
-    const response = await fetch("/api/weatherforecast");
-    const data = await response.json();
-    setWeatherForecast(data);
-  };
 
   const registPlayer = async (name: string, topic: string) => {
     const response = await fetch("/api/regist", {
@@ -90,10 +83,6 @@ function Debug() {
   return (
     <div>
       <h1>Debug Page</h1>
-      <div className="api-section">
-        <button onClick={fetchWeatherForecast}>Fetch Weather Forecast</button>
-        <pre>{JSON.stringify(weatherForecast, null, 2)}</pre>
-      </div>
       <div className="api-section">
         <button onClick={() => registPlayer("Player1", "Topic1")}>
           Register Player
