@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./Debug.css";
 import { AnswerResponse, GameScene, Player, QuestionResponse } from "../models";
 
@@ -8,6 +8,7 @@ function Debug() {
   const [questionResponse, setQuestionResponse] = useState<QuestionResponse>();
   const [answerResponse, setAnswerResponse] = useState<AnswerResponse>();
   const [guessResponse, setGuessResponse] = useState(null);
+  const [lastFetchTime, setLastFetchTime] = useState<Date>();
 
   const [playerName, setPlayerName] = useState("");
   const [playerTopic, setPlayerTopic] = useState("");
@@ -31,6 +32,7 @@ function Debug() {
     const response = await fetch("/api/scene");
     const data = await response.json();
     setScene(data);
+    setLastFetchTime(new Date());
   };
 
   const startRound = async () => {
@@ -77,6 +79,11 @@ function Debug() {
     setGuessResponse(data);
   };
 
+  useEffect(() => {
+    const interval = setInterval(fetchScene, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div>
       <h1>Debug Page</h1>
@@ -97,8 +104,8 @@ function Debug() {
         <pre>{JSON.stringify(registResponse, null, 2)}</pre>
       </div>
       <div className="api-section">
-        <button onClick={fetchScene}>Fetch Current Scene</button>
         <pre>{JSON.stringify(scene, null, 2)}</pre>
+        <div>Last fetch time: {lastFetchTime?.toLocaleTimeString()}</div>
       </div>
       <div className="api-section">
         <button onClick={startRound}>Start Round</button>
