@@ -6,10 +6,11 @@ namespace korenan.ApiService;
 /// ゲーム情報
 /// </summary>
 /// <param name="Players">参加プレイヤー</param>
+/// <param name="Topics">お題</param>
 /// <param name="Rounds">ラウンド</param>
 /// <param name="CurrentScene">現在のシーン</param>
 /// <param name="Config">コンフィグ</param>
-record Game(List<Player> Players, List<Round> Rounds, GameScene CurrentScene, Config Config);
+record Game(List<Player> Players, Dictionary<Guid, string> Topics, List<Round> Rounds, GameScene CurrentScene, Config Config);
 enum GameScene
 {
     /// <summary>
@@ -44,7 +45,7 @@ enum GameScene
 /// <param name="Id">プレイヤーID</param>
 /// <param name="Name">プレイヤー名</param>
 /// <param name="Topic">登録したお題</param>
-record Player(Guid Id, string Name, string Topic)
+record Player(Guid Id, string Name)
 {
     /// <summary>
     /// プレイヤーの現在のシーン
@@ -62,9 +63,10 @@ record Player(Guid Id, string Name, string Topic)
 /// </summary>
 /// <param name="Topic">お題</param>
 /// <param name="TopicInfo">お題の情報</param>
+/// <param name="Liars">ライアープレイヤー</param>
 /// <param name="Histories">履歴</param>
 /// <param name="LiarGuesses">ライアープレイヤーの推理</param>
-record Round(string Topic, string TopicInfo, List<HistoryInfo> Histories, List<LiarGuess> LiarGuesses);
+record Round(string Topic, string TopicInfo, Guid[] Liars, List<HistoryInfo> Histories, List<LiarGuess> LiarGuesses);
 
 /// <summary>
 /// ライアープレイヤーを推理する対象
@@ -86,7 +88,13 @@ record HistoryInfo(IPlayerResult Result, string Reason, string Prompt);
 /// </summary>
 [JsonDerivedType(typeof(QuestionResult))]
 [JsonDerivedType(typeof(AnswerResult))]
-interface IPlayerResult;
+interface IPlayerResult
+{
+    /// <summary>
+    /// プレイヤーID
+    /// </summary>
+    Guid Player { get; }
+};
 
 /// <summary>
 /// 質問の結果

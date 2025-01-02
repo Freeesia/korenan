@@ -60,7 +60,7 @@ var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
-var game = new Game([], [], GameScene.WaitRoundStart, new());
+var game = new Game([], [], [], GameScene.WaitRoundStart, new());
 
 var geminiSettings = new GeminiPromptExecutionSettings()
 {
@@ -99,24 +99,58 @@ api.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
     {
         return Results.BadRequest("You have already registered.");
     }
-    var player = new Player(user.Id, user.Name, req.Topic);
+    var player = new Player(user.Id, user.Name);
     game.Players.Add(player);
+    game.Topics.Add(player.Id, req.Topic);
     return Results.Ok(user);
 });
 
 // ラウンド開始
 api.MapPost("/start", async ([FromServices] Kernel kernel) =>
 {
-    var topics = game.Players.Select(p => p.Topic).Except(game.Rounds.Select(r => r.Topic)).ToArray();
+    if (game.Players.Any(p => p.CurrentScene != GameScene.WaitRoundStart))
+    {
+        return Results.BadRequest("Some players are not ready.");
+    }
+    await StartNextRound(kernel);
+    return Results.Ok();
+});
+
+api.MapPost("/next", async (HttpContext context, [FromServices] Kernel kernel) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var player = game.Players.First(p => p.Id == user.Id);
+    if (game.Topics.Count == game.Rounds.Count)
+    {
+        player.CurrentScene = GameScene.GameEnd;
+        game = game with { CurrentScene = GameScene.GameEnd };
+        return Results.Ok();
+    }
+    player.CurrentScene = GameScene.WaitRoundStart;
+    if (game.Players.All(p => p.CurrentScene == GameScene.WaitRoundStart))
+    {
+        await StartNextRound(kernel);
+    }
+    return Results.Ok();
+});
+
+async Task StartNextRound(Kernel kernel)
+{
+    var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
     var topic = topics[Random.Shared.Next(topics.Length)];
     var topicInfo = string.Join(Environment.NewLine, [
         await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = topic }),
         await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = topic }),
         ]);
-    var round = new Round(topic, topicInfo, [], []);
+    var round = new Round(
+        topic,
+        topicInfo,
+        game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray(),
+        [],
+        []);
     game.Rounds.Add(round);
     game = game with { CurrentScene = GameScene.QuestionAnswering };
-});
+}
 
 // 質問と回答
 api.MapPost("/question", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
@@ -182,7 +216,7 @@ api.MapPost("/question", async (HttpContext context, [FromServices] Kernel kerne
     prompt.AddExecutionSettings(geminiSettings);
     var result = await kernel.InvokeAsync(
         kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["correct"] = round.Topic, ["input"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
+        new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<QuestionResponse>();
     round.Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
@@ -265,7 +299,7 @@ api.MapPost("/guess", (HttpContext context, [FromBody] Guid target) =>
     {
         return;
     }
-    var liars = game.Players.Where(p => round.Topic == p.Topic).Select(p => p.Id).ToArray();
+    var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
     foreach (var p in game.Players)
     {
         var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
@@ -280,7 +314,7 @@ api.MapPost("/guess", (HttpContext context, [FromBody] Guid target) =>
 // シーン情報取得
 api.MapGet("/scene", () => new CurrentScene(
     game.CurrentScene,
-    game.Players.Select(p => new User(p.Id, p.Name)).ToArray(),
+    game.Players.ToArray(),
     game.CurrentScene switch
     {
         GameScene.WaitRoundStart
@@ -307,12 +341,18 @@ api.MapGet("/scene", () => new CurrentScene(
                     .ToArray(),
                 game.Rounds.Last()
                     .LiarGuesses
-                    .Where(t => t.Target == game.Players.Find(p => p.Topic == game.Rounds.Last().Topic)!.Id)
+                    .Where(t => game.Rounds.Last().Liars.Contains(t.Target))
                     .Select(t => t.Player)
-                    .ToArray(),
-                game.Players.ToDictionary(p => p.Id, p => p.Points)),
+                    .ToArray()),
         GameScene.GameEnd
-            => new GameEndInfo(game.Players.ToDictionary(p => p.Id, p => p.Points)),
+            => new GameEndInfo(
+                game.Rounds.Select(r =>
+                    new RoundResult(
+                        r.Topic,
+                        r.Histories.Last().Result.Player,
+                        r.Liars,
+                        r.LiarGuesses.Where(t => r.Liars.Contains(t.Target)).Select(t => t.Player).ToArray()))
+                    .ToArray()),
         _ => throw new NotSupportedException(),
     }));
 
@@ -351,15 +391,21 @@ record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, Goog
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
-record CurrentScene(GameScene Scene, User[] Users, ISceneInfo Info);
+record CurrentScene(GameScene Scene, Player[] Players, ISceneInfo Info);
 
+[JsonDerivedType(typeof(WaitRoundSceneInfo))]
+[JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
+[JsonDerivedType(typeof(LiarPlayerGuessingSceneInfo))]
+[JsonDerivedType(typeof(RoundSummaryInfo))]
+[JsonDerivedType(typeof(GameEndInfo))]
 interface ISceneInfo;
 
 record WaitRoundSceneInfo(int Waiting, int NextRound) : ISceneInfo;
 record QuestionAnsweringSceneInfo(int Round, IPlayerResult[] Histories) : ISceneInfo;
 record LiarPlayerGuessingSceneInfo(int Round, LiarGuess[] Targets) : ISceneInfo;
-record RoundSummaryInfo(int Round, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers, IReadOnlyDictionary<Guid, int> Points) : ISceneInfo;
-record GameEndInfo(IReadOnlyDictionary<Guid, int> Points) : ISceneInfo;
+record RoundSummaryInfo(int Round, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
+record RoundResult(string Topic, Guid CorrectPlayer, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
+record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 
 static class Extensions
 {
