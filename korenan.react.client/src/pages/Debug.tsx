@@ -1,22 +1,29 @@
 import { useState } from "react";
 import "./Debug.css";
+import { AnswerResponse, GameScene, Player, QuestionResponse } from "../models";
 
 function Debug() {
-  const [registResponse, setRegistResponse] = useState(null);
-  const [scene, setScene] = useState(null);
+  const [registResponse, setRegistResponse] = useState<Player>();
+  const [scene, setScene] = useState<GameScene>();
   const [startResponse, setStartResponse] = useState(null);
   const [nextResponse, setNextResponse] = useState(null);
-  const [questionResponse, setQuestionResponse] = useState(null);
-  const [answerResponse, setAnswerResponse] = useState(null);
+  const [questionResponse, setQuestionResponse] = useState<QuestionResponse>();
+  const [answerResponse, setAnswerResponse] = useState<AnswerResponse>();
   const [guessResponse, setGuessResponse] = useState(null);
 
-  const registPlayer = async (name: string, topic: string) => {
+  const [playerName, setPlayerName] = useState("");
+  const [playerTopic, setPlayerTopic] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [guess, setGuess] = useState("");
+
+  const registPlayer = async () => {
     const response = await fetch("/api/regist", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name, topic }),
+      body: JSON.stringify({ name: playerName, topic: playerTopic }),
     });
     const data = await response.json();
     setRegistResponse(data);
@@ -44,7 +51,7 @@ function Debug() {
     setNextResponse(data);
   };
 
-  const askQuestion = async (question: string) => {
+  const askQuestion = async () => {
     const response = await fetch("/api/question", {
       method: "POST",
       headers: {
@@ -56,7 +63,7 @@ function Debug() {
     setQuestionResponse(data);
   };
 
-  const submitAnswer = async (answer: string) => {
+  const submitAnswer = async () => {
     const response = await fetch("/api/answer", {
       method: "POST",
       headers: {
@@ -68,13 +75,13 @@ function Debug() {
     setAnswerResponse(data);
   };
 
-  const guessLiar = async (target: string) => {
+  const guessLiar = async () => {
     const response = await fetch("/api/guess", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(target),
+      body: JSON.stringify(guess),
     });
     const data = await response.json();
     setGuessResponse(data);
@@ -84,9 +91,19 @@ function Debug() {
     <div>
       <h1>Debug Page</h1>
       <div className="api-section">
-        <button onClick={() => registPlayer("Player1", "Topic1")}>
-          Register Player
-        </button>
+        <input
+          type="text"
+          placeholder="Player Name"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Player Topic"
+          value={playerTopic}
+          onChange={(e) => setPlayerTopic(e.target.value)}
+        />
+        <button onClick={registPlayer}>Register Player</button>
         <pre>{JSON.stringify(registResponse, null, 2)}</pre>
       </div>
       <div className="api-section">
@@ -102,17 +119,33 @@ function Debug() {
         <pre>{JSON.stringify(nextResponse, null, 2)}</pre>
       </div>
       <div className="api-section">
-        <button onClick={() => askQuestion("Is it an animal?")}>
-          Ask Question
-        </button>
+        <input
+          type="text"
+          placeholder="Question"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+        />
+        <button onClick={askQuestion}>Ask Question</button>
         <pre>{JSON.stringify(questionResponse, null, 2)}</pre>
       </div>
       <div className="api-section">
-        <button onClick={() => submitAnswer("Dog")}>Submit Answer</button>
+        <input
+          type="text"
+          placeholder="Answer"
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+        />
+        <button onClick={submitAnswer}>Submit Answer</button>
         <pre>{JSON.stringify(answerResponse, null, 2)}</pre>
       </div>
       <div className="api-section">
-        <button onClick={() => guessLiar("Player1")}>Guess Liar</button>
+        <input
+          type="text"
+          placeholder="Guess Liar"
+          value={guess}
+          onChange={(e) => setGuess(e.target.value)}
+        />
+        <button onClick={guessLiar}>Guess Liar</button>
         <pre>{JSON.stringify(guessResponse, null, 2)}</pre>
       </div>
     </div>
