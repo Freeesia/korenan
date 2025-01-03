@@ -46,7 +46,9 @@ function App() {
           <Route path="/debug" element={<Debug />} />
         </Routes>
         <footer>
-          <div>Last fetch time: {lastFetchTime?.toLocaleTimeString()}</div>
+          <div>
+            最終更新日時: {lastFetchTime?.toLocaleTimeString()} | 現在のシーン: {scene?.scene}
+          </div>
         </footer>
       </div>
     </SceneContext>
