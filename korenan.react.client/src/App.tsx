@@ -41,7 +41,7 @@ function App() {
   return (
     <SceneContext value={scene}>
       <UserContext value={[user, setUser]}>
-        <div>
+        <div className="app-container">
           <nav>
             <ul>
               <li>
