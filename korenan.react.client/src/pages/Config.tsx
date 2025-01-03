@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Config } from "../models";
 
 function ConfigPage() {
-  const [config, setConfig] = useState<Config>();
+  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0 });
 
   useEffect(() => {
     fetchConfig();
