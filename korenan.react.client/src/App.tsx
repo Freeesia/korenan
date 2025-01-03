@@ -7,7 +7,9 @@ import Debug from "./pages/Debug";
 import { CurrentScene, User } from "./models";
 
 export const SceneContext = createContext<CurrentScene | undefined>(undefined);
-export const UserContext = createContext<User | undefined>(undefined);
+export const UserContext = createContext<[User | undefined, (u: User) => void]>(
+  [undefined, () => {}]
+);
 
 function App() {
   const [scene, setScene] = useState<CurrentScene>();
@@ -37,7 +39,7 @@ function App() {
 
   return (
     <SceneContext value={scene}>
-      <UserContext value={user}>
+      <UserContext value={[user, setUser]}>
         <div>
           <nav>
             <ul>

@@ -5,7 +5,7 @@ import { SceneContext, UserContext } from "../App";
 
 function Debug() {
   const scene = useContext(SceneContext);
-  const user = useContext(UserContext);
+  const [user, setUser] = useContext(UserContext);
   const [registResponse, setRegistResponse] = useState<Player>();
   const [questionResponse, setQuestionResponse] = useState<QuestionResponse>();
   const [answerResponse, setAnswerResponse] = useState<AnswerResponse>();
@@ -26,6 +26,7 @@ function Debug() {
     });
     const data: Player = await response.json();
     setRegistResponse(data);
+    setUser(data);
   };
 
   const startRound = async () => {
@@ -99,8 +100,8 @@ function Debug() {
           >
             Register Player
           </button>
-          <pre>{JSON.stringify(registResponse, null, 2)}</pre>
         </div>
+        <pre>{JSON.stringify(registResponse, null, 2)}</pre>
         <div className="api-section">
           <button
             onClick={startRound}
