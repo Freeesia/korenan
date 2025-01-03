@@ -1,11 +1,23 @@
-import { Routes, Route, NavLink } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  NavLink,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import { createContext, useState, useEffect } from "react";
 import "./App.css";
 import Home from "./pages/Home";
 import Weather from "./pages/Weather";
 import Debug from "./pages/Debug";
 import Config from "./pages/Config";
-import { CurrentScene, User } from "./models";
+import NameTopicRegistration from "./pages/NameTopicRegistration";
+import WaitRoundStart from "./pages/WaitRoundStart";
+import QuestionAnswering from "./pages/QuestionAnswering";
+import LiarPlayerGuessing from "./pages/LiarPlayerGuessing";
+import RoundSummary from "./pages/RoundSummary";
+import GameEnd from "./pages/GameEnd";
+import { CurrentScene, GameScene, User } from "./models";
 
 export const SceneContext = createContext<CurrentScene | undefined>(undefined);
 export const UserContext = createContext<[User | undefined, (u: User) => void]>(
@@ -16,6 +28,8 @@ function App() {
   const [scene, setScene] = useState<CurrentScene>();
   const [user, setUser] = useState<User>();
   const [lastFetchTime, setLastFetchTime] = useState<Date>();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchScene = async () => {
     const response = await fetch("/api/scene");
@@ -37,6 +51,34 @@ function App() {
     const interval = setInterval(fetchScene, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (scene) {
+      const currentPath = location.pathname.substring(1);
+      if (!GameScene.includes(currentPath as GameScene)) {
+        return;
+      }
+      switch (scene.scene) {
+        case "WaitRoundStart":
+          navigate("/WaitRoundStart");
+          break;
+        case "QuestionAnswering":
+          navigate("/QuestionAnswering");
+          break;
+        case "LiarPlayerGuessing":
+          navigate("/LiarPlayerGuessing");
+          break;
+        case "RoundSummary":
+          navigate("/RoundSummary");
+          break;
+        case "GameEnd":
+          navigate("/GameEnd");
+          break;
+        default:
+          break;
+      }
+    }
+  }, [scene, navigate, location]);
 
   return (
     <SceneContext value={scene}>
@@ -63,6 +105,18 @@ function App() {
             <Route path="/weather" element={<Weather />} />
             <Route path="/debug" element={<Debug />} />
             <Route path="/config" element={<Config />} />
+            <Route
+              path="/name-topic-registration"
+              element={<NameTopicRegistration />}
+            />
+            <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
+            <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
+            <Route
+              path="/LiarPlayerGuessing"
+              element={<LiarPlayerGuessing />}
+            />
+            <Route path="/RoundSummary" element={<RoundSummary />} />
+            <Route path="/GameEnd" element={<GameEnd />} />
           </Routes>
           <footer>
             <div>
