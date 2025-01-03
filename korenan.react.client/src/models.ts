@@ -42,9 +42,12 @@ export interface CurrentScene {
   info: ISceneInfo;
 }
 
-export interface Player {
+export interface User {
   id: string;
   name: string;
+}
+
+export interface Player extends User {
   currentScene: GameScene;
   points: number;
 }

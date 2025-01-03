@@ -1,15 +1,16 @@
 import { useContext, useState } from "react";
 import "./Debug.css";
 import { AnswerResponse, Player, QuestionResponse } from "../models";
-import { SceneContext } from "../App";
+import { SceneContext, UserContext } from "../App";
 
 function Debug() {
   const scene = useContext(SceneContext);
+  const user = useContext(UserContext);
   const [registResponse, setRegistResponse] = useState<Player>();
   const [questionResponse, setQuestionResponse] = useState<QuestionResponse>();
   const [answerResponse, setAnswerResponse] = useState<AnswerResponse>();
 
-  const [playerName, setPlayerName] = useState("");
+  const [playerName, setPlayerName] = useState(user?.name || "");
   const [playerTopic, setPlayerTopic] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -88,14 +89,27 @@ function Debug() {
             onChange={(e) => setPlayerTopic(e.target.value)}
             disabled={scene?.scene !== "WaitRoundStart"}
           />
-          <button onClick={registPlayer} disabled={scene?.scene !== "WaitRoundStart"}>
+          <button
+            onClick={registPlayer}
+            disabled={scene?.scene !== "WaitRoundStart"}
+          >
             Register Player
           </button>
           <pre>{JSON.stringify(registResponse, null, 2)}</pre>
         </div>
         <div className="api-section">
-          <button onClick={startRound} disabled={scene?.scene !== "WaitRoundStart"}>Start Round</button>
-          <button onClick={nextRound} disabled={scene?.scene !== "RoundSummary"}>Next Round</button>
+          <button
+            onClick={startRound}
+            disabled={scene?.scene !== "WaitRoundStart"}
+          >
+            Start Round
+          </button>
+          <button
+            onClick={nextRound}
+            disabled={scene?.scene !== "RoundSummary"}
+          >
+            Next Round
+          </button>
         </div>
         <div className="api-section">
           <input
@@ -105,7 +119,12 @@ function Debug() {
             onChange={(e) => setQuestion(e.target.value)}
             disabled={scene?.scene !== "QuestionAnswering"}
           />
-          <button onClick={askQuestion} disabled={scene?.scene !== "QuestionAnswering"}>Ask Question</button>
+          <button
+            onClick={askQuestion}
+            disabled={scene?.scene !== "QuestionAnswering"}
+          >
+            Ask Question
+          </button>
           <pre>{JSON.stringify(questionResponse, null, 2)}</pre>
         </div>
         <div className="api-section">
@@ -116,7 +135,12 @@ function Debug() {
             onChange={(e) => setAnswer(e.target.value)}
             disabled={scene?.scene !== "QuestionAnswering"}
           />
-          <button onClick={submitAnswer} disabled={scene?.scene !== "QuestionAnswering"}>Submit Answer</button>
+          <button
+            onClick={submitAnswer}
+            disabled={scene?.scene !== "QuestionAnswering"}
+          >
+            Submit Answer
+          </button>
           <pre>{JSON.stringify(answerResponse, null, 2)}</pre>
         </div>
         <div className="api-section">
@@ -127,7 +151,12 @@ function Debug() {
             onChange={(e) => setGuess(e.target.value)}
             disabled={scene?.scene !== "LiarPlayerGuessing"}
           />
-          <button onClick={guessLiar} disabled={scene?.scene !== "LiarPlayerGuessing"}>Guess Liar</button>
+          <button
+            onClick={guessLiar}
+            disabled={scene?.scene !== "LiarPlayerGuessing"}
+          >
+            Guess Liar
+          </button>
         </div>
       </div>
       <div className="scene-container">
