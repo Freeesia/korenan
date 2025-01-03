@@ -4,6 +4,7 @@ import "./App.css";
 import Home from "./pages/Home";
 import Weather from "./pages/Weather";
 import Debug from "./pages/Debug";
+import Config from "./pages/Config";
 import { CurrentScene, User } from "./models";
 
 export const SceneContext = createContext<CurrentScene | undefined>(undefined);
@@ -52,12 +53,16 @@ function App() {
               <li>
                 <NavLink to="/debug">Debug</NavLink>
               </li>
+              <li>
+                <NavLink to="/config">Config</NavLink>
+              </li>
             </ul>
           </nav>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/weather" element={<Weather />} />
             <Route path="/debug" element={<Debug />} />
+            <Route path="/config" element={<Config />} />
           </Routes>
           <footer>
             <div>

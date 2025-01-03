@@ -373,6 +373,12 @@ api.MapPost("/reset", () =>
     game = new Game([], [], [], GameScene.WaitRoundStart, new());
 });
 
+// 設定取得
+api.MapGet("/config", () => game.Config);
+
+// 設定更新
+api.MapPost("/config", ([FromBody] Config newConfig) => game = game with { Config = newConfig });
+
 #if DEBUG
 api.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
 api.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
