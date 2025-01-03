@@ -8,7 +8,6 @@ function Debug() {
   const [registResponse, setRegistResponse] = useState<Player>();
   const [questionResponse, setQuestionResponse] = useState<QuestionResponse>();
   const [answerResponse, setAnswerResponse] = useState<AnswerResponse>();
-  const [guessResponse, setGuessResponse] = useState(null);
 
   const [playerName, setPlayerName] = useState("");
   const [playerTopic, setPlayerTopic] = useState("");
@@ -24,7 +23,7 @@ function Debug() {
       },
       body: JSON.stringify({ name: playerName, topic: playerTopic }),
     });
-    const data = await response.json();
+    const data: Player = await response.json();
     setRegistResponse(data);
   };
 
@@ -44,7 +43,7 @@ function Debug() {
       },
       body: JSON.stringify(question),
     });
-    const data = await response.json();
+    const data: QuestionResponse = await response.json();
     setQuestionResponse(data);
   };
 
@@ -56,79 +55,84 @@ function Debug() {
       },
       body: JSON.stringify(answer),
     });
-    const data = await response.json();
+    const data: AnswerResponse = await response.json();
     setAnswerResponse(data);
   };
 
   const guessLiar = async () => {
-    const response = await fetch("/api/guess", {
+    await fetch("/api/guess", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(guess),
     });
-    const data = await response.json();
-    setGuessResponse(data);
   };
 
   return (
-    <div>
-      <h1>Debug Page</h1>
-      <div className="api-section">
-        <input
-          type="text"
-          placeholder="Player Name"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Player Topic"
-          value={playerTopic}
-          onChange={(e) => setPlayerTopic(e.target.value)}
-        />
-        <button onClick={registPlayer}>Register Player</button>
-        <pre>{JSON.stringify(registResponse, null, 2)}</pre>
+    <div className="container">
+      <h1 className="title">Debug Page</h1>
+      <div className="api-container">
+        <div className="api-section disabled">
+          <input
+            type="text"
+            placeholder="Player Name"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            disabled={scene?.scene !== "WaitRoundStart"}
+          />
+          <input
+            type="text"
+            placeholder="Player Topic"
+            value={playerTopic}
+            onChange={(e) => setPlayerTopic(e.target.value)}
+            disabled={scene?.scene !== "WaitRoundStart"}
+          />
+          <button onClick={registPlayer} disabled={scene?.scene !== "WaitRoundStart"}>
+            Register Player
+          </button>
+          <pre>{JSON.stringify(registResponse, null, 2)}</pre>
+        </div>
+        <div className="api-section">
+          <button onClick={startRound} disabled={scene?.scene !== "WaitRoundStart"}>Start Round</button>
+          <button onClick={nextRound} disabled={scene?.scene !== "RoundSummary"}>Next Round</button>
+        </div>
+        <div className="api-section">
+          <input
+            type="text"
+            placeholder="Question"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            disabled={scene?.scene !== "QuestionAnswering"}
+          />
+          <button onClick={askQuestion} disabled={scene?.scene !== "QuestionAnswering"}>Ask Question</button>
+          <pre>{JSON.stringify(questionResponse, null, 2)}</pre>
+        </div>
+        <div className="api-section">
+          <input
+            type="text"
+            placeholder="Answer"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            disabled={scene?.scene !== "QuestionAnswering"}
+          />
+          <button onClick={submitAnswer} disabled={scene?.scene !== "QuestionAnswering"}>Submit Answer</button>
+          <pre>{JSON.stringify(answerResponse, null, 2)}</pre>
+        </div>
+        <div className="api-section">
+          <input
+            type="text"
+            placeholder="Guess Liar"
+            value={guess}
+            onChange={(e) => setGuess(e.target.value)}
+            disabled={scene?.scene !== "LiarPlayerGuessing"}
+          />
+          <button onClick={guessLiar} disabled={scene?.scene !== "LiarPlayerGuessing"}>Guess Liar</button>
+        </div>
       </div>
-      <div className="api-section">
+      <div className="scene-container">
+        <h2>Current Scene Information</h2>
         <pre>{JSON.stringify(scene, null, 2)}</pre>
-      </div>
-      <div className="api-section">
-        <button onClick={startRound}>Start Round</button>
-      </div>
-      <div className="api-section">
-        <button onClick={nextRound}>Next Round</button>
-      </div>
-      <div className="api-section">
-        <input
-          type="text"
-          placeholder="Question"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-        />
-        <button onClick={askQuestion}>Ask Question</button>
-        <pre>{JSON.stringify(questionResponse, null, 2)}</pre>
-      </div>
-      <div className="api-section">
-        <input
-          type="text"
-          placeholder="Answer"
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-        />
-        <button onClick={submitAnswer}>Submit Answer</button>
-        <pre>{JSON.stringify(answerResponse, null, 2)}</pre>
-      </div>
-      <div className="api-section">
-        <input
-          type="text"
-          placeholder="Guess Liar"
-          value={guess}
-          onChange={(e) => setGuess(e.target.value)}
-        />
-        <button onClick={guessLiar}>Guess Liar</button>
-        <pre>{JSON.stringify(guessResponse, null, 2)}</pre>
       </div>
     </div>
   );
