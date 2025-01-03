@@ -70,6 +70,10 @@ function Debug() {
     });
   };
 
+  const resetGame = async () => {
+    await fetch("/api/reset", { method: "POST" });
+  };
+
   return (
     <div className="container">
       <h1 className="title">Debug Page</h1>
@@ -110,6 +114,7 @@ function Debug() {
           >
             Next Round
           </button>
+          <button onClick={resetGame}>Reset Game</button>
         </div>
         <div className="api-section">
           <input

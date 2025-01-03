@@ -367,6 +367,12 @@ api.MapPost("/scene", (HttpContext context, [FromBody] GameScene scene) =>
 // プレイヤー情報取得
 api.MapGet("/me", (HttpContext context) => context.Session.Get<User>(nameof(User)) is { } u ? Results.Ok(u) : Results.NotFound());
 
+// ゲームリセット
+api.MapPost("/reset", () =>
+{
+    game = new Game([], [], [], GameScene.WaitRoundStart, new());
+});
+
 #if DEBUG
 api.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
 api.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
