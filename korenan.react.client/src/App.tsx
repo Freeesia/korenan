@@ -61,7 +61,7 @@ function App() {
       if (scene.scene === currentPath) {
         return;
       }
-      navigate(`/${scene.scene}`);
+      navigate(`/${scene.scene}`, { replace: true });
     }
   }, [scene, location]);
 
