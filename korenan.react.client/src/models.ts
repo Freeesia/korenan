@@ -81,6 +81,7 @@ export interface LiarGuess {
 
 export interface RoundSummaryInfo {
   round: number;
+  topic: string;
   topicCorrectPlayers: string[];
   liarCorrectPlayers: string[];
 }

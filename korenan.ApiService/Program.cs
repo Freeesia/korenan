@@ -332,6 +332,7 @@ api.MapGet("/scene", () => new CurrentScene(
         GameScene.RoundSummary
             => new RoundSummaryInfo(
                 game.Rounds.Count,
+                game.Rounds.Last().Topic,
                 game.Rounds.Last()
                     .Histories
                     .Select(h => h.Result)
@@ -349,7 +350,12 @@ api.MapGet("/scene", () => new CurrentScene(
                 game.Rounds.Select(r =>
                     new RoundResult(
                         r.Topic,
-                        r.Histories.Last().Result.Player,
+                        r.Histories
+                            .Select(h => h.Result)
+                            .OfType<AnswerResult>()
+                            .Where(h => h.Result == AnswerResultType.Correct)
+                            .Select(h => h.Player)
+                            .ToArray(),
                         r.Liars,
                         r.LiarGuesses.Where(t => r.Liars.Contains(t.Target)).Select(t => t.Player).ToArray()))
                     .ToArray()),
@@ -417,8 +423,8 @@ interface ISceneInfo;
 record WaitRoundSceneInfo(int Waiting, int NextRound) : ISceneInfo;
 record QuestionAnsweringSceneInfo(int Round, IPlayerResult[] Histories) : ISceneInfo;
 record LiarPlayerGuessingSceneInfo(int Round, LiarGuess[] Targets) : ISceneInfo;
-record RoundSummaryInfo(int Round, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
-record RoundResult(string Topic, Guid CorrectPlayer, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
+record RoundSummaryInfo(int Round, string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
+record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 
 static class Extensions
