@@ -1,9 +1,12 @@
+import { useNavigate } from "react-router-dom";
 
 function Home() {
+  const navigate = useNavigate();
+
   return (
     <div>
-      <h1>Hello, world!</h1>
-      <p>Welcome to your new app.</p>
+      <h1>これなーんだ❓(ライアー)</h1>
+      <button onClick={() => navigate("/regist")}>参加！</button>
     </div>
   );
 }
