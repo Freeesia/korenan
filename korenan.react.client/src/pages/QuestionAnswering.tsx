@@ -2,16 +2,16 @@ import { useContext, useEffect, useState } from "react";
 import { SceneContext } from "../App";
 import {
   QuestionAnsweringSceneInfo,
-  QuestionResponse,
-  AnswerResponse,
+  QuestionResultType,
+  AnswerResultType,
 } from "../models";
 
 function QuestionAnswering() {
   const scene = useContext(SceneContext);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [qResponse, setQResponse] = useState<QuestionResponse>();
-  const [aResponse, setAResponse] = useState<AnswerResponse>();
+  const [qResult, setQResult] = useState<QuestionResultType>();
+  const [aResult, setAResult] = useState<AnswerResultType>();
   const [isWaiting, setIsWaiting] = useState(false);
 
   useEffect(() => {
@@ -33,8 +33,9 @@ function QuestionAnswering() {
       },
       body: JSON.stringify(question),
     });
-    const data: QuestionResponse = await res.json();
-    setQResponse(data);
+    const data: QuestionResultType = await res.json();
+    setQResult(data);
+    setQuestion("");
     setIsWaiting(false);
   };
 
@@ -47,8 +48,9 @@ function QuestionAnswering() {
       },
       body: JSON.stringify(answer),
     });
-    const data: AnswerResponse = await res.json();
-    setAResponse(data);
+    const data: AnswerResultType = await res.json();
+    setAResult(data);
+    setAnswer("");
     setIsWaiting(false);
   };
 
@@ -87,7 +89,7 @@ function QuestionAnswering() {
         <button onClick={askQuestion} disabled={isWaiting}>
           質問
         </button>
-        <pre>{JSON.stringify(qResponse, null, 2)}</pre>
+        <pre>{qResult}</pre>
       </div>
       <div>
         <input
@@ -100,7 +102,7 @@ function QuestionAnswering() {
         <button onClick={submitAnswer} disabled={isWaiting}>
           解答
         </button>
-        <pre>{JSON.stringify(aResponse, null, 2)}</pre>
+        <pre>{aResult}</pre>
       </div>
     </div>
   );
