@@ -9,6 +9,7 @@ using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
 using Microsoft.SemanticKernel.Plugins.Web.Bing;
+using NeoSmart.AsyncLock;
 using GoogleTrends = GoogleTrendsApi.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -105,6 +106,8 @@ api.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
     return Results.Ok(user);
 });
 
+var roundLock = new AsyncLock();
+
 // ラウンド開始
 api.MapPost("/start", async ([FromServices] Kernel kernel) =>
 {
@@ -112,6 +115,7 @@ api.MapPost("/start", async ([FromServices] Kernel kernel) =>
     {
         return Results.BadRequest("Some players are not ready.");
     }
+    using var l = await roundLock.LockAsync();
     await StartNextRound(kernel);
     return Results.Ok();
 });
@@ -119,6 +123,7 @@ api.MapPost("/start", async ([FromServices] Kernel kernel) =>
 api.MapPost("/next", async (HttpContext context, [FromServices] Kernel kernel) =>
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    using var l = await roundLock.LockAsync();
     var player = game.Players.First(p => p.Id == user.Id);
     if (game.Topics.Count == game.Rounds.Count)
     {
