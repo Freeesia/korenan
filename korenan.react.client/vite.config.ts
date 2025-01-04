@@ -75,5 +75,6 @@ export default defineConfig({
     },
     port: parseInt(env.VITE_PORT!),
     https,
+    host: true,
   },
 });
