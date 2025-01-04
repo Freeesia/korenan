@@ -63,7 +63,7 @@ function App() {
       }
       navigate(`/${scene.scene}`);
     }
-  }, [scene, navigate, location]);
+  }, [scene, location]);
 
   return (
     <SceneContext value={scene}>
