@@ -4,13 +4,24 @@ import { SceneContext } from "../App";
 function WaitRoundStart() {
   const scene = useContext(SceneContext);
 
+  const startRound = async () => {
+    await fetch("/api/start", { method: "POST" });
+  };
+
   return (
     <div>
-      <h1>Wait Round Start</h1>
+      <h1>プレイヤー待機中</h1>
       <div>
-        Waiting for players to be ready...
+        <h2>参加プレイヤー:</h2>
+        <ul>
+          {scene?.players.map((player) => (
+            <li key={player.id}>
+              {player.name} - {player.currentScene}
+            </li>
+          ))}
+        </ul>
       </div>
-      <pre>{JSON.stringify(scene, null, 2)}</pre>
+      <button onClick={startRound}>ラウンド開始</button>
     </div>
   );
 }
