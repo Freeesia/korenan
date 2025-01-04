@@ -26,6 +26,10 @@ function GameEnd() {
     return scene?.players.find((p) => p.id === id)?.name || id;
   };
 
+  const resetGame = async () => {
+    await fetch("/api/reset", { method: "POST" });
+  };
+
   return (
     <div>
       <h1>最終結果</h1>
@@ -49,6 +53,7 @@ function GameEnd() {
           </li>
         ))}
       </ul>
+      <button onClick={resetGame}>リセット</button>
     </div>
   );
 }
