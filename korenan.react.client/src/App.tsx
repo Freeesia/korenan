@@ -14,7 +14,7 @@ import Config from "./pages/Config";
 import RegistTopic from "./pages/RegistTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
 import QuestionAnswering from "./pages/QuestionAnswering";
-import LiarPlayerGuessing from "./pages/LiarPlayerGuessing";
+import LiarGuess from "./pages/LiarGuess";
 import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
 import { CurrentScene, GameScene, User } from "./models";
@@ -94,8 +94,8 @@ function App() {
             <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
             <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
             <Route
-              path="/LiarPlayerGuessing"
-              element={<LiarPlayerGuessing />}
+              path="/LiarGuess"
+              element={<LiarGuess />}
             />
             <Route path="/RoundSummary" element={<RoundSummary />} />
             <Route path="/GameEnd" element={<GameEnd />} />

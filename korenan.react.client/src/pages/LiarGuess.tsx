@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { SceneContext, UserContext } from "../App";
 import { LiarGuessSceneInfo } from "../models";
 
-function LiarPlayerGuessing() {
+function LiarGuess() {
   const scene = useContext(SceneContext);
   const [user] = useContext(UserContext);
   const [guess, setGuess] = useState("");
@@ -88,4 +88,4 @@ function LiarPlayerGuessing() {
   );
 }
 
-export default LiarPlayerGuessing;
+export default LiarGuess;
