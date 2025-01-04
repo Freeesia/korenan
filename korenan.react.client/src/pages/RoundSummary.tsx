@@ -48,6 +48,14 @@ function RoundSummary() {
         ))}
       </ul>
       <button onClick={nextScene}>次のシーンへ</button>
+      <ul>
+        {scene?.players.map((player) => (
+          <li key={player.id}>
+            {player.name}:{" "}
+            {player.currentScene == "WaitRoundStart" ? "OK" : "結果表示中"}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
