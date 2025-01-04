@@ -11,7 +11,7 @@ import Home from "./pages/Home";
 import Weather from "./pages/Weather";
 import Debug from "./pages/Debug";
 import Config from "./pages/Config";
-import NameTopicRegistration from "./pages/NameTopicRegistration";
+import RegistTopic from "./pages/RegistTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
 import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarPlayerGuessing from "./pages/LiarPlayerGuessing";
@@ -106,8 +106,8 @@ function App() {
             <Route path="/debug" element={<Debug />} />
             <Route path="/config" element={<Config />} />
             <Route
-              path="/name-topic-registration"
-              element={<NameTopicRegistration />}
+              path="/regist"
+              element={<RegistTopic />}
             />
             <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
             <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
