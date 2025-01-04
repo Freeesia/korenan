@@ -5,7 +5,7 @@
             // IntelliSense を使用して、C# デバッグに存在する属性を確認します
             // 既存の属性の説明にホバーを使用する
             // 詳細については、https://github.com/dotnet/vscode-csharp/blob/main/debugger-launchjson.md を参照してください
-            "name": ".NET Core Launch (console)",
+            "name": "Aspire",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -16,8 +16,28 @@
             // 'console' フィールドの詳細については、https://aka.ms/VSCode-CS-LaunchJson-Console を参照してください
             "console": "internalConsole",
             "stopAtEntry": false,
+            "launchSettingsProfile": "https",
+            "launchBrowser": {
+                "enabled": true,
+            },
+            "envFile": "${workspaceFolder}/.env",
+            "requireExactSource": false
+        },
+        {
+            "name": "Server",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/korenan.ApiService/bin/Debug/net8.0/korenan.ApiService.dll",
+            "cwd": "${workspaceFolder}/korenan.ApiService",
+            "console": "internalConsole",
+            "stopAtEntry": false,
             "launchSettingsProfile": "http",
-            "envFile": "${workspaceFolder}/.env"
+            "launchBrowser": {
+                "enabled": true,
+            },
+            "envFile": "${workspaceFolder}/.env",
+            "requireExactSource": false
         },
         {
             "name": ".NET Core Attach",

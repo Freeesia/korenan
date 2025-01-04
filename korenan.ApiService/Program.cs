@@ -9,6 +9,7 @@ using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
 using Microsoft.SemanticKernel.Plugins.Web.Bing;
+using NeoSmart.AsyncLock;
 using GoogleTrends = GoogleTrendsApi.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,18 +31,33 @@ builder.Services
     //.AddSingleton<IWebSearchEngineConnector>(sp => new GoogleSearchConnector(googleKey, sp.GetRequiredService<ILogger<GoogleSearchConnector>>()))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WebSearchEnginePlugin>("search", sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
-    .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp));
+    .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen()
+    .AddDistributedMemoryCache()
+    .AddSession(op =>
+    {
+        op.IdleTimeout = TimeSpan.FromDays(30);
+        op.Cookie.HttpOnly = true;
+        op.Cookie.IsEssential = true;
+    });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-var summaries = new[]
+if (app.Environment.IsDevelopment())
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-var quiz = new Quiz();
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseSession();
+
+var game = new Game([], [], [], GameScene.WaitRoundStart, new());
 
 var geminiSettings = new GeminiPromptExecutionSettings()
 {
@@ -53,200 +69,377 @@ var geminiSettings = new GeminiPromptExecutionSettings()
     ],
 };
 
-app.MapGet("/weatherforecast", () =>
+var api = app.MapGroup("/api");
+
+// ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ»ãŠé¡Œç™»éŒ²
+api.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    if (context.Session.Get<User>(nameof(User)) is not { } user)
+    {
+        user = new User(Guid.NewGuid(), req.Name);
+        context.Session.Set(nameof(User), user);
+    }
+    if (game.Players.Any(p => p.Id == user.Id))
+    {
+        return Results.BadRequest("You have already registered.");
+    }
+    if (string.IsNullOrEmpty(req.Topic))
+    {
+        return Results.BadRequest("Topic is required.");
+    }
+    var player = new Player(user.Id, user.Name);
+    game.Players.Add(player);
+    game.Topics.Add(player.Id, req.Topic);
+    return Results.Ok(user);
 });
 
-app.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
+var roundLock = new AsyncLock();
 
-app.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
-
-app.MapPost("/target", async ([FromServices] Kernel kernel, [FromBody] string target) =>
+// ãƒ©ã‚¦ãƒ³ãƒ‰é–‹å§‹
+api.MapPost("/start", async ([FromServices] Kernel kernel) =>
 {
-    quiz.Correct = target;
-    quiz.CorrectInfo = string.Join(Environment.NewLine, [
-        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = target }),
-        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = target })
+    if (game.Players.Any(p => p.CurrentScene != GameScene.WaitRoundStart))
+    {
+        return Results.BadRequest("Some players are not ready.");
+    }
+    using var l = await roundLock.LockAsync();
+    await StartNextRound(kernel);
+    return Results.Ok();
+});
+
+api.MapPost("/next", async (HttpContext context, [FromServices] Kernel kernel) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    using var l = await roundLock.LockAsync();
+    var player = game.Players.First(p => p.Id == user.Id);
+    if (game.Topics.Count == game.Rounds.Count)
+    {
+        player.CurrentScene = GameScene.GameEnd;
+        game = game with { CurrentScene = GameScene.GameEnd };
+        return Results.Ok();
+    }
+    player.CurrentScene = GameScene.WaitRoundStart;
+    if (game.Players.All(p => p.CurrentScene == GameScene.WaitRoundStart))
+    {
+        await StartNextRound(kernel);
+    }
+    return Results.Ok();
+});
+
+async Task StartNextRound(Kernel kernel)
+{
+    var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
+    var topic = topics[Random.Shared.Next(topics.Length)];
+    var topicInfo = string.Join(Environment.NewLine, [
+        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = topic }),
+        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = topic }),
         ]);
-});
+    var round = new Round(
+        topic,
+        topicInfo,
+        game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray(),
+        [],
+        []);
+    game.Rounds.Add(round);
+    game = game with { CurrentScene = GameScene.QuestionAnswering };
+}
 
-app.MapPost("/question", async ([FromServices] Kernel kernel, [FromBody] string input) =>
+// è³ªå•ã¨å›ç­”
+api.MapPost("/question", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
 {
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var round = game.Rounds.Last();
+    if (round.Histories.Select(h => h.Result).OfType<QuestionResult>().Count(h => h.Player == user.Id) > game.Config.QuestionLimit)
+    {
+        throw new InvalidOperationException("You have reached the answer limit.");
+    }
+    var player = game.Players.First(p => p.Id == user.Id);
     var questionPrompt = new PromptTemplateConfig("""
-        ‚ ‚È‚½‚Í•¶Í‚ÌZ³‚ğs‚¤ƒAƒVƒXƒ^ƒ“ƒg‚Å‚·B
-        —^‚¦‚ç‚ê‚½‘ÎÛ‚Æ¿–â‚ğ‚Â‚È‚°‚ÄA‘ÎÛ‚É‘Î‚·‚é¿–â•¶‚ğì¬‚µ‚Ä‚­‚¾‚³‚¢B
+        ã‚ãªãŸã¯æ–‡ç« ã®æ ¡æ­£ã‚’è¡Œã†ã‚¢ã‚·ã‚¹ã‚¿ãƒ³ãƒˆã§ã™ã€‚
+        ä¸ãˆã‚‰ã‚ŒãŸå¯¾è±¡ã¨è³ªå•ã‚’ã¤ãªã’ã¦ã€å¯¾è±¡ã«å¯¾ã™ã‚‹è³ªå•æ–‡ã‚’ä½œæˆã—ã¦ãã ã•ã„ã€‚
 
-        ## ‘ÎÛ
+        ## å¯¾è±¡
         {{$target}}
 
-        ## ¿–â
+        ## è³ªå•
         {{$input}}
 
-        ### —á
-        * ‘ÎÛ: u“Œ‹v
-        * ¿–â: uñ“s‚Å‚·‚©Hv
-        * o—Í: u“Œ‹‚Íñ“s‚Å‚·‚©Hv
+        ### ä¾‹
+        * å¯¾è±¡: ã€Œæ±äº¬ã€
+        * è³ªå•: ã€Œé¦–éƒ½ã§ã™ã‹ï¼Ÿã€
+        * å‡ºåŠ›: ã€Œæ±äº¬ã¯é¦–éƒ½ã§ã™ã‹ï¼Ÿã€
 
-        * ‘ÎÛ: uŒ¢v
-        * ¿–â: u¶‚«•¨Hv
-        * o—Í: uŒ¢‚Í¶‚«•¨‚Å‚·‚©Hv
+        * å¯¾è±¡: ã€ŒçŠ¬ã€
+        * è³ªå•: ã€Œç”Ÿãç‰©ï¼Ÿã€
+        * å‡ºåŠ›: ã€ŒçŠ¬ã¯ç”Ÿãç‰©ã§ã™ã‹ï¼Ÿã€
 
-        * ‘ÎÛ: u“ú–{v
-        * ¿–â: u‚»‚ê‚Í¶‚«•¨‚Å‚·‚©v
-        * o—Í: u“ú–{‚Í¶‚«•¨‚Å‚·‚©Hv
+        * å¯¾è±¡: ã€Œæ—¥æœ¬ã€
+        * è³ªå•: ã€Œãã‚Œã¯ç”Ÿãç‰©ã§ã™ã‹ã€
+        * å‡ºåŠ›: ã€Œæ—¥æœ¬ã¯ç”Ÿãç‰©ã§ã™ã‹ï¼Ÿã€
         """)
     {
         Name = "question",
-        Description = "u‘ÎÛv‚Æu¿–âv‚©‚ç‘ÎÛ‚É‘Î‚·‚é¿–â•¶‚ğ¶¬‚·‚é",
-        InputVariables = [new() { Name = "input", IsRequired = true, Description = "¿–â" }, new() { Name = "target", IsRequired = true, Description = "‘ÎÛ" }],
+        Description = "ã€Œå¯¾è±¡ã€ã¨ã€Œè³ªå•ã€ã‹ã‚‰å¯¾è±¡ã«å¯¾ã™ã‚‹è³ªå•æ–‡ã‚’ç”Ÿæˆã™ã‚‹",
+        InputVariables = [new() { Name = "input", IsRequired = true, Description = "è³ªå•" }, new() { Name = "target", IsRequired = true, Description = "å¯¾è±¡" }],
     };
     questionPrompt.AddExecutionSettings(geminiSettings);
     var questionFunc = kernel.CreateFunctionFromPrompt(questionPrompt);
     kernel.ImportPluginFromFunctions("question", [questionFunc]);
-    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
-        Ÿ‚ÌQlî•ñ‚ğŠî‚É‚µ‚ÄAƒ†[ƒU[‚Ì¿–â‚É‰ñ“š‚µ‚Ä‚­‚¾‚³‚¢B
-        
-        ## Qlî•ñ
-        {{ $correctInfo }}
+        æ¬¡ã®å‚è€ƒæƒ…å ±ã‚’åŸºã«ã—ã¦ã€ãƒ¦ãƒ¼ã‚¶ãƒ¼ã®è³ªå•ã«å›ç­”ã—ã¦ãã ã•ã„ã€‚
+
+        ## å¯¾è±¡
+        {{$topic}}
+
+        ## å‚è€ƒæƒ…å ±
+        {{ $topicInfo }}
         {{ search $keywords }}
-              
-        ## ƒ†[ƒU[‚Ì¿–â
-        {{ question intput=$intput target=$correct }}
-        
-        ## ‰ñ“š‚Ìwj
-        * Qlî•ñ“à‚ÉA¿–â‚É‘Î‚µ‚Ä–¾Šm‚Ém’è‚³‚ê‚é“à—e‚ª‚ ‚ê‚Î`yes`‚Æ‰ñ“š‚µ‚Ä‚­‚¾‚³‚¢B
-        * Qlî•ñ“à‚ÉA¿–â‚É‘Î‚µ‚Ä–¾Šm‚É”Û’è‚³‚ê‚é“à—e‚ª‚ ‚ê‚Î`no`‚Æ‰ñ“š‚µ‚Ä‚­‚¾‚³‚¢B
-        * Qlî•ñ“à‚ÉA¿–â‚É‰ñ“š‰Â”\‚Èî•ñ‚ªŠÜ‚Ü‚ê‚Ä‚¢‚È‚¢ê‡‚Í`no`‚Æ‰ñ“š‚µ‚Ä‚­‚¾‚³‚¢B
-        * ¿–â‚ªu‚Í‚¢vu‚¢‚¢‚¦v‚Å‰ñ“š‚Å‚«‚È‚¢ŠJ‚¢‚½¿–â‚Ìê‡‚Í`unanswerable`‚Æ‰ñ“š‚µ‚Ä‚­‚¾‚³‚¢B
-        
-        ## o—Í‚Ì—l®
-        ˆÈ‰º‚ÌJsonƒtƒH[ƒ}ƒbƒg‚É‚µ‚½‚ª‚Á‚ÄA¿–â‚É‘Î‚µ‚Ä‰ñ“š‚ğ“±‚«o‚µ‚½——R‚Æ‚Æ‚à‚É‰ñ“š‚ğo—Í‚µ‚Ä‚­‚¾‚³‚¢B
+
+        ## ãƒ¦ãƒ¼ã‚¶ãƒ¼ã®è³ªå•
+        {{ question intput=$intput target=$topic }}
+
+        ## å›ç­”ã®æŒ‡é‡
+        * å‚è€ƒæƒ…å ±å†…ã«ã€è³ªå•ã«å¯¾ã—ã¦æ˜ç¢ºã«è‚¯å®šã•ã‚Œã‚‹å†…å®¹ãŒã‚ã‚Œã°`yes`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+        * å‚è€ƒæƒ…å ±å†…ã«ã€è³ªå•ã«å¯¾ã—ã¦æ˜ç¢ºã«å¦å®šã•ã‚Œã‚‹å†…å®¹ãŒã‚ã‚Œã°`no`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+        * å‚è€ƒæƒ…å ±å†…ã«ã€è³ªå•ã«å›ç­”å¯èƒ½ãªæƒ…å ±ãŒå«ã¾ã‚Œã¦ã„ãªã„å ´åˆã¯`no`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+        * å¯¾è±¡ãŒã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‹ã©ã†ã‹ã‚’ã¾ãšåˆ¤æ–­ã—ã€ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã®å ´åˆã¯ã€ãã®ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã«å¯¾ã™ã‚‹è³ªå•ã¨ã—ã¦å›ç­”ã—ã¦ãã ã•ã„ã€‚
+          * ä¾‹: å¯¾è±¡ãŒã€Œãƒ‰ãƒ©ãˆã‚‚ã‚“ã€ã®å ´åˆã€ã€Œãƒ‰ãƒ©ãˆã‚‚ã‚“ã¯çŒ«ã§ã™ã‹ï¼Ÿã€ã¨è³ªå•ã•ã‚ŒãŸå ´åˆã¯`no`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+          * ä¾‹: å¯¾è±¡ãŒã€Œãƒ‰ãƒ©ãˆã‚‚ã‚“ã€ã®å ´åˆã€ã€Œãƒ‰ãƒ©ãˆã‚‚ã‚“ã¯çŒ«å‹ãƒ­ãƒœãƒƒãƒˆã§ã™ã‹ï¼Ÿã€ã¨è³ªå•ã•ã‚ŒãŸå ´åˆã¯`yes`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+          * ä¾‹: å¯¾è±¡ãŒã€Œé‡æ¯”ã®ã³å¤ªã€ã®å ´åˆã€ã€Œé‡æ¯”ã®ã³å¤ªã¯äººã§ã™ã‹ï¼Ÿã€ã¨è³ªå•ã•ã‚ŒãŸå ´åˆã¯`yes`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+          * ä¾‹: å¯¾è±¡ãŒã€Œé‡æ¯”ã®ã³å¤ªã€ã®å ´åˆã€ã€Œé‡æ¯”ã®ã³å¤ªã¯çŠ¬ã§ã™ã‹ï¼Ÿã€ã¨è³ªå•ã•ã‚ŒãŸå ´åˆã¯`no`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+          * ä¾‹: å¯¾è±¡ãŒãƒãƒ¼ãƒãƒ£ãƒ«YouTuberã®å ´åˆã€ã€Œãƒãƒ¼ãƒãƒ£ãƒ«YouTuberã¯äººã§ã™ã‹ï¼Ÿã€ã¨è³ªå•ã•ã‚ŒãŸå ´åˆã¯`yes`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+        * è³ªå•ãŒã€Œã¯ã„ã€ã€Œã„ã„ãˆã€ã§å›ç­”ã§ããªã„é–‹ã„ãŸè³ªå•ã®å ´åˆã¯`unanswerable`ã¨å›ç­”ã—ã¦ãã ã•ã„ã€‚
+
+        ## å‡ºåŠ›ã®æ§˜å¼
+        ä»¥ä¸‹ã®Jsonãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆã«ã—ãŸãŒã£ã¦ã€è³ªå•ã«å¯¾ã—ã¦å›ç­”ã‚’å°ãå‡ºã—ãŸç†ç”±ã¨ã¨ã‚‚ã«å›ç­”ã‚’å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
         {
-            "reason": "”»’f‚Ì——R",
-            "result": "`yes`A`no`A`unanswerable`‚Ì‚¢‚¸‚ê‚©‚Ì‰ñ“š"
+            "reason": "åˆ¤æ–­ã®ç†ç”±",
+            "result": "`yes`ã€`no`ã€`unanswerable`ã®ã„ãšã‚Œã‹ã®å›ç­”"
         }
         """);
     prompt.AddExecutionSettings(geminiSettings);
     var result = await kernel.InvokeAsync(
         kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["correct"] = quiz.Correct, ["input"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+        new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<QuestionResponse>();
-    quiz.Histories.Add(new(new QuestionResult(input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    round.Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
     return res.Result;
 });
 
-app.MapGet("/history", () => quiz.Histories.Select(h => h.Result));
-app.MapGet("/history/internal", () => quiz.Histories);
+api.MapGet("/round/{i}/history", ([FromRoute] int i) => game.Rounds[i].Histories.Select(h => h.Result));
+api.MapGet("/round/{i}/history/internal", ([FromRoute] int i) => game.Rounds[i].Histories);
 
-app.MapPost("/answer", async ([FromServices] Kernel kernel, [FromBody] string input) =>
+// ãƒ¦ãƒ¼ã‚¶ãƒ¼ã®è§£ç­”ã¨çµæœ
+api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel, [FromBody] string input) =>
 {
-    if (input == quiz.Correct)
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var round = game.Rounds.Last();
+    if (round.Histories.Select(h => h.Result).OfType<AnswerResult>().Count(h => h.Player == user.Id) > game.Config.AnswerLimit)
     {
-        quiz.Histories.Add(new(new AnswerResult(input, AnswerResultType.Correct), "Š®‘Sˆê’v", string.Empty));
+        throw new InvalidOperationException("You have reached the answer limit.");
+    }
+    var player = game.Players.First(p => p.Id == user.Id);
+    if (input == round.Topic)
+    {
+        round.Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "å®Œå…¨ä¸€è‡´", string.Empty));
+        player.Points += game.Config.CorrectPoint;
+        game = game with { CurrentScene = GameScene.LiarGuess };
         return AnswerResultType.Correct;
     }
-    var keywords = await kernel.GetRelationKeywords(quiz.Correct, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
     var prompt = new PromptTemplateConfig("""
-        ‚ ‚È‚½‚ÍƒNƒCƒY‚Ìo‘èÒ‚Å‚ ‚èAƒ†[ƒU[‚©‚ç‚Ì‰ñ“š‚Ì³Œë‚ğ”»’f‚·‚éê–å‰Æ‚Å‚·B
-        Qlî•ñ‚ğŠî‚É‚µ‚ÄAƒ†[ƒU[‚Ì‰ñ“š‚ªƒNƒCƒY‚Ì³‰ğ‚É‘Î‚µ‚Ä“¯ˆê‚©‚Ç‚¤‚©‚ğ”»’f‚µ‚Ä‚­‚¾‚³‚¢B
+        ã‚ãªãŸã¯ã‚¯ã‚¤ã‚ºã®å‡ºé¡Œè€…ã§ã‚ã‚Šã€ãƒ¦ãƒ¼ã‚¶ãƒ¼ã‹ã‚‰ã®å›ç­”ã®æ­£èª¤ã‚’åˆ¤æ–­ã™ã‚‹å°‚é–€å®¶ã§ã™ã€‚
+        å‚è€ƒæƒ…å ±ã‚’åŸºã«ã—ã¦ã€ãƒ¦ãƒ¼ã‚¶ãƒ¼ã®å›ç­”ãŒã‚¯ã‚¤ã‚ºã®æ­£è§£ã«å¯¾ã—ã¦åŒä¸€ã‹ã©ã†ã‹ã‚’åˆ¤æ–­ã—ã¦ãã ã•ã„ã€‚
 
-        ## ³‰ğ
+        ## æ­£è§£
         {{ $correct }}
 
-        ## ƒ†[ƒU[‚Ì‰ñ“š
+        ## ãƒ¦ãƒ¼ã‚¶ãƒ¼ã®å›ç­”
         {{ $answer }}
 
-        ## ³‰ğ‚ÉŠÖ‚·‚éQlî•ñ
+        ## æ­£è§£ã«é–¢ã™ã‚‹å‚è€ƒæƒ…å ±
         {{ $correctInfo }}
 
-        ## ‰ñ“š‚ÉŠÖ‚·‚éQlî•ñ
+        ## å›ç­”ã«é–¢ã™ã‚‹å‚è€ƒæƒ…å ±
         {{ search $answer }}
         {{ wiki.Search $answer }}
-        
-        ## ³‰ğ‚Æ‰ñ“š‚ÌŠÖŒW«‚ÉŠÖ‚·‚éQlî•ñ
+
+        ## æ­£è§£ã¨å›ç­”ã®é–¢ä¿‚æ€§ã«é–¢ã™ã‚‹å‚è€ƒæƒ…å ±
         {{ search $keywords }}
 
-        ## ”»’f‚¨‚æ‚Ño—Í‚Ìwj
-        1. ³‰ğ‚Æ‰ñ“š‚ªŠ®‘Sˆê’v‚µ‚Ä‚¢‚éê‡‚Í`correct`‚Æo—Í‚µ‚Ä‚­‚¾‚³‚¢B
-        2. ³‰ğ‚Æ‰ñ“š‚ªŠ®‘Sˆê’v‚µ‚Ä‚¢‚È‚¢‚ªA•\‹L—h‚ê‚È‚ÇQlî•ñ‚ğŒ³‚É‰ñ“š‚ª³‰ğ‚Æ•K—v\•ª‚É“¯ˆê‚Å‚ ‚é‚Æ”»’f‚Å‚«‚éê‡‚Í`correct`‚Æo—Í‚µ‚Ä‚­‚¾‚³‚¢B
-        3. ³‰ğ‚Æ‰ñ“š‚ªˆê’v‚µ‚È‚¢‚ªA‰ñ“š‚ª³‰ğ‚Ìˆê•”‚Å‚ ‚èA‰ñ“š‚ª³‰ğ‚Ì\•ªğŒ‚ğ–‚½‚·ê‡‚Í`correct`‚Æo—Í‚µ‚Ä‚­‚¾‚³‚¢B
-        4. ³‰ğ‚Æ‰ñ“š‚ªˆê’v‚µ‚È‚¢‚ªA³‰ğ‚ª‰ñ“š‚Ìˆê•”‚Å‚ ‚èA‰ñ“š‚ª³‰ğ‚Ì•K—vğŒ‚ğ–‚½‚·‚ªA\•ªğŒ‚ğ–‚½‚³‚È‚¢ê‡‚Í`more_specific`‚Æo—Í‚µ‚Ä‚­‚¾‚³‚¢B
-        5. ã‹L‚Ì‚¢‚¸‚ê‚É‚à“–‚Ä‚Í‚Ü‚ç‚È‚¢ê‡‚Í`incorrect`‚Æo—Í‚µ‚Ä‚­‚¾‚³‚¢B
+        ## åˆ¤æ–­ãŠã‚ˆã³å‡ºåŠ›ã®æŒ‡é‡
+        1. æ­£è§£ã¨å›ç­”ãŒå®Œå…¨ä¸€è‡´ã—ã¦ã„ã‚‹å ´åˆã¯`correct`ã¨å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
+        2. æ­£è§£ã¨å›ç­”ãŒå®Œå…¨ä¸€è‡´ã—ã¦ã„ãªã„ãŒã€è¡¨è¨˜æºã‚Œãªã©å‚è€ƒæƒ…å ±ã‚’å…ƒã«å›ç­”ãŒæ­£è§£ã¨å¿…è¦ååˆ†ã«åŒä¸€ã§ã‚ã‚‹ã¨åˆ¤æ–­ã§ãã‚‹å ´åˆã¯`correct`ã¨å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
+        3. æ­£è§£ã¨å›ç­”ãŒä¸€è‡´ã—ãªã„ãŒã€å›ç­”ãŒæ­£è§£ã®ä¸€éƒ¨ã§ã‚ã‚Šã€å›ç­”ãŒæ­£è§£ã®ååˆ†æ¡ä»¶ã‚’æº€ãŸã™å ´åˆã¯`correct`ã¨å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
+        4. æ­£è§£ã¨å›ç­”ãŒä¸€è‡´ã—ãªã„ãŒã€æ­£è§£ãŒå›ç­”ã®ä¸€éƒ¨ã§ã‚ã‚Šã€å›ç­”ãŒæ­£è§£ã®å¿…è¦æ¡ä»¶ã‚’æº€ãŸã™ãŒã€ååˆ†æ¡ä»¶ã‚’æº€ãŸã•ãªã„å ´åˆã¯`more_specific`ã¨å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
+        5. ä¸Šè¨˜ã®ã„ãšã‚Œã«ã‚‚å½“ã¦ã¯ã¾ã‚‰ãªã„å ´åˆã¯`incorrect`ã¨å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
 
-        ## o—Í‚Ì—l®
-        ˆÈ‰º‚ÌJsonƒtƒH[ƒ}ƒbƒg‚É‚µ‚½‚ª‚Á‚ÄA¿–â‚É‘Î‚µ‚Ä‰ñ“š‚ğ“±‚«o‚µ‚½——R‚Æ‚Æ‚à‚É‰ñ“š‚ğo—Í‚µ‚Ä‚­‚¾‚³‚¢B
+        ## å‡ºåŠ›ã®æ§˜å¼
+        ä»¥ä¸‹ã®Jsonãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆã«ã—ãŸãŒã£ã¦ã€è³ªå•ã«å¯¾ã—ã¦å›ç­”ã‚’å°ãå‡ºã—ãŸç†ç”±ã¨ã¨ã‚‚ã«å›ç­”ã‚’å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
         {
-            "reason": "”»’f‚Ì——R",
-            "result": "`correct`A`more_specific`A`incorrect`‚Ì‚¢‚¸‚ê‚©‚Ì‰ñ“š"
+            "reason": "åˆ¤æ–­ã®ç†ç”±",
+            "result": "`correct`ã€`more_specific`ã€`incorrect`ã®ã„ãšã‚Œã‹ã®å›ç­”"
         }
         """);
     prompt.AddExecutionSettings(geminiSettings);
     var result = await kernel.InvokeAsync(
         kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["correct"] = quiz.Correct, ["answer"] = input, ["correctInfo"] = quiz.CorrectInfo, ["keywords"] = keywords });
+        new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<AnswerResponse>();
-    quiz.Histories.Add(new(new AnswerResult(input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    round.Histories.Add(new(new AnswerResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    if (res.Result == AnswerResultType.Correct)
+    {
+        player.Points += game.Config.CorrectPoint;
+        game = game with { CurrentScene = GameScene.LiarGuess };
+        return AnswerResultType.Correct;
+    }
+    // ã™ã¹ã¦ã®ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒè§£ç­”åˆ¶é™ã«é”ã—ãŸå ´åˆã€ãƒ©ã‚¤ã‚¢ãƒ¼ã‚’æ¨ç†
+    var playerAnswers = round.Histories.Select(h => h.Result).OfType<AnswerResult>().GroupBy(h => h.Player).ToDictionary(g => g.Key, g => g.Count());
+    if (game.Players.Select(p => playerAnswers.TryGetValue(p.Id, out var count) ? count : 0).All(c => c >= game.Config.AnswerLimit))
+    {
+        var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => game.Players.First(pl => pl.Id == p.Key)).ToArray();
+        foreach (var liar in liars)
+        {
+            liar.Points += game.Config.NoCorrectPoint;
+        }
+        game = game with { CurrentScene = GameScene.LiarGuess };
+    }
+
     return res.Result;
 });
 
-#if DEBUG
-app.MapGet("/debug", () => new[]
+// å˜˜ã‚’ã¤ã„ã¦ã„ã‚‹ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®æ¨ç†
+api.MapPost("/guess", (HttpContext context, [FromBody] Guid target) =>
 {
-    new HistoryInfo(new QuestionResult("“Œ‹", QuestionResultType.Yes), "“Œ‹‚Íñ“s‚Å‚·‚©H", "“Œ‹‚Í“ú–{‚Ìñ“s‚Å‚·B"),
-    new HistoryInfo(new AnswerResult("“Œ‹", AnswerResultType.Correct), "Š®‘Sˆê’v", string.Empty),
-    new HistoryInfo(new QuestionResult("Œ¢", QuestionResultType.No), "Œ¢‚Í¶‚«•¨‚Å‚·‚©H", "Œ¢‚Í¶‚«•¨‚Å‚·B"),
-    new HistoryInfo(new AnswerResult("Œ¢", AnswerResultType.Correct), "Š®‘Sˆê’v", string.Empty),
-    new HistoryInfo(new QuestionResult("“ú–{", QuestionResultType.Unanswerable), "“ú–{‚Í¶‚«•¨‚Å‚·‚©H", "“ú–{‚Í‘‚Å‚·B"),
-    new HistoryInfo(new AnswerResult("“ú–{", AnswerResultType.Correct), "Š®‘Sˆê’v", string.Empty),
-    new HistoryInfo(new QuestionResult("“Œ‹", QuestionResultType.Yes), "“Œ‹‚Íñ“s‚Å‚·‚©H", "“Œ‹‚Í“ú–{‚Ìñ“s‚Å‚·B"),
-    new HistoryInfo(new AnswerResult("“Œ‹", AnswerResultType.Correct), "Š®‘Sˆê’v", string.Empty),
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var round = game.Rounds.Last();
+    round.LiarGuesses.Add(new(user.Id, target));
+    if (round.LiarGuesses.Count != game.Players.Count)
+    {
+        return;
+    }
+    var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
+    foreach (var p in game.Players)
+    {
+        var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
+        if (liars.Contains(liar.Target))
+        {
+            p.Points += game.Config.CorrectPoint;
+        }
+    }
+    game = game with { CurrentScene = GameScene.RoundSummary };
 });
-app.MapGet("/trends/InterestOverTime", () => GoogleTrends.GetInterestOverTimeTyped([string.Empty], GeoId.Japan, DateOptions.LastMonth, GroupOptions.All, hl: "ja"));
-app.MapGet("/trends/TrendingSearches", () => GoogleTrends.GetTrendingSearches("japan"));
-app.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("JP"));
-app.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
-app.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
-app.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
+
+// ã‚·ãƒ¼ãƒ³æƒ…å ±å–å¾—
+api.MapGet("/scene", () => new CurrentScene(
+    game.CurrentScene,
+    game.Rounds.Count,
+    game.Players.ToArray(),
+    game.CurrentScene switch
+    {
+        GameScene.WaitRoundStart
+            => new WaitRoundSceneInfo(
+                game.Players.Where(p => p.CurrentScene == game.CurrentScene).Count()),
+        GameScene.QuestionAnswering
+            => new QuestionAnsweringSceneInfo(
+                game.Rounds.Last().Histories.Select(h => h.Result).ToArray()),
+        GameScene.LiarGuess
+            => new LiarGuessSceneInfo(
+                game.Rounds.Last().Topic,
+                game.Rounds.Last()
+                    .Histories
+                    .Select(h => h.Result)
+                    .OfType<AnswerResult>()
+                    .Where(h => h.Result == AnswerResultType.Correct)
+                    .Select(h => h.Player)
+                    .ToArray(),
+                [.. game.Rounds.Last().LiarGuesses]),
+        GameScene.RoundSummary
+            => new RoundSummaryInfo(
+                game.Rounds.Last().Topic,
+                game.Rounds.Last()
+                    .GetCorrectPlayers()
+                    .ToArray(),
+                game.Rounds.Last()
+                    .LiarGuesses
+                    .Where(t => game.Rounds.Last().Liars.Contains(t.Target))
+                    .Select(t => t.Player)
+                    .ToArray()),
+        GameScene.GameEnd
+            => new GameEndInfo(
+                game.Rounds.Select(r =>
+                    new RoundResult(
+                        r.Topic,
+                        r.GetCorrectPlayers().ToArray(),
+                        r.Liars,
+                        r.LiarGuesses.Where(t => r.Liars.Contains(t.Target)).Select(t => t.Player).ToArray()))
+                    .ToArray()),
+        _ => throw new NotSupportedException(),
+    }));
+
+// ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®ã‚·ãƒ¼ãƒ³æƒ…å ±æ›´æ–°
+api.MapPost("/scene", (HttpContext context, [FromBody] GameScene scene) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var player = game.Players.First(p => p.Id == user.Id);
+    player.CurrentScene = scene;
+});
+
+// ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼æƒ…å ±å–å¾—
+api.MapGet("/me", (HttpContext context) => context.Session.Get<User>(nameof(User)) is { } u ? Results.Ok(u) : Results.NotFound());
+
+// ã‚²ãƒ¼ãƒ ãƒªã‚»ãƒƒãƒˆ
+api.MapPost("/reset", () =>
+{
+    game = new Game([], [], [], GameScene.WaitRoundStart, new());
+});
+
+// è¨­å®šå–å¾—
+api.MapGet("/config", () => game.Config);
+
+// è¨­å®šæ›´æ–°
+api.MapPost("/config", ([FromBody] Config newConfig) => game = game with { Config = newConfig });
+
+#if DEBUG
+api.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
+api.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
+api.MapGet("/trends/InterestOverTime", () => GoogleTrends.GetInterestOverTimeTyped([string.Empty], GeoId.Japan, DateOptions.LastMonth, GroupOptions.All, hl: "ja"));
+api.MapGet("/trends/TrendingSearches", () => GoogleTrends.GetTrendingSearches("japan"));
+api.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("JP"));
+api.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
+api.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
+api.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
 #endif
 
-app.MapDefaultEndpoints();
 
+app.MapDefaultEndpoints();
+app.MapFallbackToFile("/index.html");
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+record RegistRequest(string Name, string Topic);
 
 record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, GoogleSearchParam GoogleSearch);
 record QuestionResponse(string Reason, QuestionResultType Result);
-enum QuestionResultType { Yes, No, Unanswerable }
 record AnswerResponse(string Reason, AnswerResultType Result);
-enum AnswerResultType { Correct, MoreSpecific, Incorrect }
-class Quiz
-{
-    public string Correct { get; set; }
-    public string CorrectInfo { get; set; }
-    public List<HistoryInfo> Histories { get; } = [];
-}
-record HistoryInfo(IResult Result, string Reason, string Prompt);
-[JsonDerivedType(typeof(QuestionResult))]
-[JsonDerivedType(typeof(AnswerResult))]
-interface IResult;
-record QuestionResult(string Question, QuestionResultType Result) : IResult;
-record AnswerResult(string Answer, AnswerResultType Result) : IResult;
+
+record CurrentScene(GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
+
+[JsonDerivedType(typeof(WaitRoundSceneInfo))]
+[JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
+[JsonDerivedType(typeof(LiarGuessSceneInfo))]
+[JsonDerivedType(typeof(RoundSummaryInfo))]
+[JsonDerivedType(typeof(GameEndInfo))]
+interface ISceneInfo;
+
+record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
+record QuestionAnsweringSceneInfo(IPlayerResult[] Histories) : ISceneInfo;
+record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, LiarGuess[] Targets) : ISceneInfo;
+record RoundSummaryInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
+record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
+record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 
 static class Extensions
 {
@@ -262,22 +455,22 @@ static class Extensions
     public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, PromptExecutionSettings settings)
     {
         var ptompt = new PromptTemplateConfig("""
-        ‘ÎÛ‚Ì2‚Â‚Ì’PŒêA•¶Í‚ÌŠÖŒW«‚ğŒŸõƒGƒ“ƒWƒ“‚Å’²¸‚·‚é‚½‚ß‚ÌƒL[ƒ[ƒh‚ğ¶¬‚µ‚Ä‚­‚¾‚³‚¢B
+        å¯¾è±¡ã®2ã¤ã®å˜èªã€æ–‡ç« ã®é–¢ä¿‚æ€§ã‚’æ¤œç´¢ã‚¨ãƒ³ã‚¸ãƒ³ã§èª¿æŸ»ã™ã‚‹ãŸã‚ã®ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ã‚’ç”Ÿæˆã—ã¦ãã ã•ã„ã€‚
 
-        ## ‘ÎÛ
+        ## å¯¾è±¡
         * {{$correct}}
         * {{$target}}
 
-        ### —á
-        * ‘ÎÛ: u“Œ‹vuñ“s‚Å‚·‚©Hv
-        * ƒL[ƒ[ƒh: u“Œ‹ ñ“s ‚©‚Ç‚¤‚©v
-        * ‘ÎÛ: uŒ¢vu¶‚«•¨Hv
-        * ƒL[ƒ[ƒh: uŒ¢ ¶‚«•¨ ‚©‚Ç‚¤‚©v
-        * ‘ÎÛ: u“ú–{vu¶‚«•¨v
-        * ƒL[ƒ[ƒh: u“ú–{ ¶‚«•¨ ‚©‚Ç‚¤‚©v
+        ### ä¾‹
+        * å¯¾è±¡: ã€Œæ±äº¬ã€ã€Œé¦–éƒ½ã§ã™ã‹ï¼Ÿã€
+        * ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰: ã€Œæ±äº¬ é¦–éƒ½ ã‹ã©ã†ã‹ã€
+        * å¯¾è±¡: ã€ŒçŠ¬ã€ã€Œç”Ÿãç‰©ï¼Ÿã€
+        * ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰: ã€ŒçŠ¬ ç”Ÿãç‰© ã‹ã©ã†ã‹ã€
+        * å¯¾è±¡: ã€Œæ—¥æœ¬ã€ã€Œç”Ÿãç‰©ã€
+        * ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰: ã€Œæ—¥æœ¬ ç”Ÿãç‰© ã‹ã©ã†ã‹ã€
 
-        ƒL[ƒ[ƒh‚ÍƒXƒy[ƒX‹æØ‚è‚Å¿–â‚É‘Î‚·‚é‰ñ“š‚ğ“¾‚é‚±‚Æ‚ª‚Å‚«‚é‚æ‚¤‚ÈŒŸõƒGƒ“ƒWƒ“‚Ö“n‚·î•ñ‚ğo—Í‚µ‚Ä‚­‚¾‚³‚¢B
-        ƒL[ƒ[ƒhˆÈŠO‚Ìî•ñ‚Ío—Í‚µ‚È‚¢‚Å‚­‚¾‚³‚¢B
+        ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ã¯ã‚¹ãƒšãƒ¼ã‚¹åŒºåˆ‡ã‚Šã§è³ªå•ã«å¯¾ã™ã‚‹å›ç­”ã‚’å¾—ã‚‹ã“ã¨ãŒã§ãã‚‹ã‚ˆã†ãªæ¤œç´¢ã‚¨ãƒ³ã‚¸ãƒ³ã¸æ¸¡ã™æƒ…å ±ã‚’å‡ºåŠ›ã—ã¦ãã ã•ã„ã€‚
+        ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ä»¥å¤–ã®æƒ…å ±ã¯å‡ºåŠ›ã—ãªã„ã§ãã ã•ã„ã€‚
         """)
         {
             Name = "keywords",

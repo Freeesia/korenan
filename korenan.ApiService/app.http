@@ -1,88 +1,101 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
-@base=https://localhost:7410
+@base=https://localhost:7410/api
 
-GET {{base}}/wiki?keyword=ƒuƒbƒL[
+GET {{base}}/wiki?keyword=ãƒ–ãƒƒã‚­ãƒ¼
 
 ###
 
-GET {{base}}/search?keyword=ƒuƒbƒL[
+GET {{base}}/search?keyword=ãƒ–ãƒƒã‚­ãƒ¼
 
 ###
 POST {{base}}/target
 Content-Type: application/json
-"ƒ~ƒbƒL[ƒ}ƒEƒX"
+
+"ãƒŸãƒƒã‚­ãƒ¼ãƒã‚¦ã‚¹"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"l‚Å‚·‚©H"
+
+"äººã§ã™ã‹ï¼Ÿ"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"êŠ‚Å‚·‚©H"
+
+"å ´æ‰€ã§ã™ã‹ï¼Ÿ"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"•¨‚Å‚·‚©H"
+
+"ç‰©ã§ã™ã‹ï¼Ÿ"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"H‚×•¨H"
+
+"é£Ÿã¹ç‰©ï¼Ÿ"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"ƒAƒjƒ‚ÌƒLƒƒƒ‰H"
+
+"ã‚¢ãƒ‹ãƒ¡ã®ã‚­ãƒ£ãƒ©ï¼Ÿ"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"ƒfƒBƒYƒj[‚ÉŠÖŒW‚ ‚éH"
+
+"ãƒ‡ã‚£ã‚ºãƒ‹ãƒ¼ã«é–¢ä¿‚ã‚ã‚‹ï¼Ÿ"
 
 ###
 
 POST {{base}}/question
 Content-Type: application/json
-"1950”NˆÈ~‚Ìì•iH"
+
+"1950å¹´ä»¥é™ã®ä½œå“ï¼Ÿ"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
-"ƒ~ƒbƒL[ƒ}ƒEƒX"
+
+"ãƒŸãƒƒã‚­ãƒ¼ãƒã‚¦ã‚¹"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
-"ƒ~ƒj[ƒ}ƒEƒX"
+
+"ãƒŸãƒ‹ãƒ¼ãƒã‚¦ã‚¹"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
-"ƒLƒ…ƒAƒTƒ“ƒVƒƒƒCƒ“"
+
+"ã‚­ãƒ¥ã‚¢ã‚µãƒ³ã‚·ãƒ£ã‚¤ãƒ³"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
-"ƒuƒbƒL["
+
+"ãƒ–ãƒƒã‚­ãƒ¼"
 
 ###
 
 POST {{base}}/answer
 Content-Type: application/json
-"R‹F—¢"
+
+"å±±å¹ç¥ˆé‡Œ"
 
 ###
 
@@ -91,10 +104,6 @@ GET {{base}}/history
 ###
 
 GET {{base}}/history/internal
-
-### 
-
-GET {{base}}/debug
 
 ### 
 
@@ -119,3 +128,21 @@ GET {{base}}/trends/TodaySearches
 ### 
 
 GET {{base}}/trends/RelatedQueries
+
+###
+
+GET {{base}}/session
+
+### ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ»ãƒˆãƒ”ãƒƒã‚¯ç™»éŒ²
+
+POST {{base}}/regist
+Content-Type: application/json
+
+{
+    "name": "Freesia",
+    "topic": "ãƒŸãƒƒã‚­ãƒ¼ãƒã‚¦ã‚¹"
+}
+
+### ãƒ©ã‚¦ãƒ³ãƒ‰ã‚¹ã‚¿ãƒ¼ãƒˆ
+
+POST {{base}}/start
