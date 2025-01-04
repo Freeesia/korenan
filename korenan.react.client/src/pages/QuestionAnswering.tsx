@@ -4,6 +4,9 @@ import {
   QuestionAnsweringSceneInfo,
   QuestionResultType,
   AnswerResultType,
+  IPlayerResult,
+  AnswerResult,
+  QuestionResult,
 } from "../models";
 
 function QuestionAnswering() {
@@ -61,9 +64,11 @@ function QuestionAnswering() {
     return undefined;
   };
 
-  const getPlayerName = (id: string) => {
-    return scene?.players.find((p) => p.id === id)?.name || id;
-  };
+  const getPlayerName = (id: string) =>
+    scene?.players.find((p) => p.id === id)?.name || id;
+
+  const getAnswerResult = (result: IPlayerResult) => result as AnswerResult;
+  const getQuestionResult = (result: IPlayerResult) => result as QuestionResult;
 
   return (
     <div>
@@ -73,7 +78,17 @@ function QuestionAnswering() {
           {sceneInfo()?.histories.map((history, index) => (
             <li key={index}>
               {getPlayerName(history.player)}:{" "}
-              {history.question || history.answer} - {history.result}
+              {history.type === "Question" ? (
+                <span>
+                  {getQuestionResult(history).question} -{" "}
+                  {getQuestionResult(history).result}
+                </span>
+              ) : (
+                <span>
+                  {getAnswerResult(history).answer} -{" "}
+                  {getAnswerResult(history).result}
+                </span>
+              )}
             </li>
           ))}
         </ul>

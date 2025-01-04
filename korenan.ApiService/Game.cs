@@ -84,6 +84,22 @@ record LiarGuess(Guid Player, Guid Target);
 record HistoryInfo(IPlayerResult Result, string Reason, string Prompt);
 
 /// <summary>
+/// プレイヤー行動の結果タイプ
+/// </summary>
+enum PlayerResultType
+{
+    /// <summary>
+    /// 質問
+    /// </summary>
+    Question,
+
+    /// <summary>
+    /// 解答
+    /// </summary>
+    Answer,
+}
+
+/// <summary>
 /// 結果のインターフェース
 /// </summary>
 [JsonDerivedType(typeof(QuestionResult))]
@@ -91,10 +107,15 @@ record HistoryInfo(IPlayerResult Result, string Reason, string Prompt);
 interface IPlayerResult
 {
     /// <summary>
+    /// 結果のタイプ
+    /// </summary>
+    PlayerResultType Type { get; }
+
+    /// <summary>
     /// プレイヤーID
     /// </summary>
     Guid Player { get; }
-};
+}
 
 /// <summary>
 /// 質問の結果
@@ -102,7 +123,10 @@ interface IPlayerResult
 /// <param name="Player">質問したプレイヤー</param>
 /// <param name="Question">質問内容</param>
 /// <param name="Result">結果</param>
-record QuestionResult(Guid Player, string Question, QuestionResultType Result) : IPlayerResult;
+record QuestionResult(Guid Player, string Question, QuestionResultType Result) : IPlayerResult
+{
+    public PlayerResultType Type => PlayerResultType.Question;
+}
 
 /// <summary>
 /// 質問の結果タイプ
@@ -131,7 +155,10 @@ enum QuestionResultType
 /// <param name="Player">解答したプレイヤー</param>
 /// <param name="Answer">プレイヤーの解答</param>
 /// <param name="Result">結果</param>
-record AnswerResult(Guid Player, string Answer, AnswerResultType Result) : IPlayerResult;
+record AnswerResult(Guid Player, string Answer, AnswerResultType Result) : IPlayerResult
+{
+    public PlayerResultType Type => PlayerResultType.Answer;
+}
 
 /// <summary>
 /// 解答の結果タイプ

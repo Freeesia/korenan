@@ -11,10 +11,11 @@ export interface RegistRequest {
 }
 
 export interface IPlayerResult {
+  type: "Question" | "Answer";
   player: string;
 }
 
-export interface QuestionResponse extends IPlayerResult {
+export interface QuestionResult extends IPlayerResult {
   question: string;
   result: QuestionResultType;
 }
@@ -23,7 +24,7 @@ export const QuestionResultType = ["Yes", "No", "Unanswerable"] as const;
 
 export type QuestionResultType = (typeof QuestionResultType)[number];
 
-export interface AnswerResponse extends IPlayerResult {
+export interface AnswerResult extends IPlayerResult {
   answer: string;
   result: AnswerResultType;
 }

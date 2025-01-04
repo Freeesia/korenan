@@ -1,14 +1,14 @@
 import { useContext, useState } from "react";
 import "./Debug.css";
-import { AnswerResponse, Player, QuestionResponse } from "../models";
+import { AnswerResult, Player, QuestionResult } from "../models";
 import { SceneContext, UserContext } from "../App";
 
 function Debug() {
   const scene = useContext(SceneContext);
   const [user, setUser] = useContext(UserContext);
   const [registResponse, setRegistResponse] = useState<Player>();
-  const [questionResponse, setQuestionResponse] = useState<QuestionResponse>();
-  const [answerResponse, setAnswerResponse] = useState<AnswerResponse>();
+  const [questionResponse, setQuestionResponse] = useState<QuestionResult>();
+  const [answerResponse, setAnswerResponse] = useState<AnswerResult>();
 
   const [playerName, setPlayerName] = useState(user?.name || "");
   const [playerTopic, setPlayerTopic] = useState("");
@@ -45,7 +45,7 @@ function Debug() {
       },
       body: JSON.stringify(question),
     });
-    const data: QuestionResponse = await response.json();
+    const data: QuestionResult = await response.json();
     setQuestionResponse(data);
   };
 
@@ -57,7 +57,7 @@ function Debug() {
       },
       body: JSON.stringify(answer),
     });
-    const data: AnswerResponse = await response.json();
+    const data: AnswerResult = await response.json();
     setAnswerResponse(data);
   };
 
