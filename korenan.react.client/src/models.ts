@@ -88,7 +88,7 @@ export interface RoundSummaryInfo {
 
 export interface RoundResult {
   topic: string;
-  correctPlayer: string;
+  topicCorrectPlayers: string[];
   liarPlayers: string[];
   liarCorrectPlayers: string[];
 }
