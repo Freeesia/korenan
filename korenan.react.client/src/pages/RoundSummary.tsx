@@ -32,7 +32,7 @@ function RoundSummary() {
 
   return (
     <div>
-      <h1>Round {sceneInfo()?.round}</h1>
+      <h1>Round {scene?.round}</h1>
       <h2>お題</h2>
       <p>{sceneInfo()?.topic}</p>
       <h2>正解者</h2>

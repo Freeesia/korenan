@@ -38,6 +38,7 @@ export type AnswerResultType = (typeof AnswerResultType)[number];
 
 export interface CurrentScene {
   scene: GameScene;
+  round: number;
   players: Player[];
   info: ISceneInfo;
 }
@@ -61,16 +62,13 @@ export type ISceneInfo =
 
 export interface WaitRoundSceneInfo {
   waiting: number;
-  nextRound: number;
 }
 
 export interface QuestionAnsweringSceneInfo {
-  round: number;
   histories: IPlayerResult[];
 }
 
 export interface LiarPlayerGuessingSceneInfo {
-  round: number;
   targets: LiarGuess[];
 }
 
@@ -80,7 +78,6 @@ export interface LiarGuess {
 }
 
 export interface RoundSummaryInfo {
-  round: number;
   topic: string;
   topicCorrectPlayers: string[];
   liarCorrectPlayers: string[];

@@ -332,24 +332,21 @@ api.MapPost("/guess", (HttpContext context, [FromBody] Guid target) =>
 // シーン情報取得
 api.MapGet("/scene", () => new CurrentScene(
     game.CurrentScene,
+    game.Rounds.Count,
     game.Players.ToArray(),
     game.CurrentScene switch
     {
         GameScene.WaitRoundStart
             => new WaitRoundSceneInfo(
-                game.Players.Where(p => p.CurrentScene == game.CurrentScene).Count(),
-                game.Rounds.Count + 1),
+                game.Players.Where(p => p.CurrentScene == game.CurrentScene).Count()),
         GameScene.QuestionAnswering
             => new QuestionAnsweringSceneInfo(
-                game.Rounds.Count,
                 game.Rounds.Last().Histories.Select(h => h.Result).ToArray()),
         GameScene.LiarPlayerGuessing
             => new LiarPlayerGuessingSceneInfo(
-                game.Rounds.Count,
                 [.. game.Rounds.Last().LiarGuesses]),
         GameScene.RoundSummary
             => new RoundSummaryInfo(
-                game.Rounds.Count,
                 game.Rounds.Last().Topic,
                 game.Rounds.Last()
                     .Histories
@@ -429,7 +426,7 @@ record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, Goog
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
-record CurrentScene(GameScene Scene, Player[] Players, ISceneInfo Info);
+record CurrentScene(GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
 
 [JsonDerivedType(typeof(WaitRoundSceneInfo))]
 [JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
@@ -438,10 +435,10 @@ record CurrentScene(GameScene Scene, Player[] Players, ISceneInfo Info);
 [JsonDerivedType(typeof(GameEndInfo))]
 interface ISceneInfo;
 
-record WaitRoundSceneInfo(int Waiting, int NextRound) : ISceneInfo;
-record QuestionAnsweringSceneInfo(int Round, IPlayerResult[] Histories) : ISceneInfo;
-record LiarPlayerGuessingSceneInfo(int Round, LiarGuess[] Targets) : ISceneInfo;
-record RoundSummaryInfo(int Round, string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
+record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
+record QuestionAnsweringSceneInfo(IPlayerResult[] Histories) : ISceneInfo;
+record LiarPlayerGuessingSceneInfo(LiarGuess[] Targets) : ISceneInfo;
+record RoundSummaryInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 
