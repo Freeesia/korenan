@@ -93,17 +93,14 @@ function App() {
             <Route path="/regist" element={<RegistTopic />} />
             <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
             <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
-            <Route
-              path="/LiarGuess"
-              element={<LiarGuess />}
-            />
+            <Route path="/LiarGuess" element={<LiarGuess />} />
             <Route path="/RoundSummary" element={<RoundSummary />} />
             <Route path="/GameEnd" element={<GameEnd />} />
           </Routes>
           <footer>
             <div>
-              最終更新日時: {lastFetchTime?.toLocaleTimeString()} |
-              現在のシーン: {scene?.scene} | プレイヤー: {user?.name}
+              最終更新日時: {lastFetchTime?.toLocaleTimeString()} | プレイヤー:{" "}
+              {user?.name}
             </div>
           </footer>
         </div>
