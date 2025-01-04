@@ -32,7 +32,7 @@
             "cwd": "${workspaceFolder}/korenan.ApiService",
             "console": "internalConsole",
             "stopAtEntry": false,
-            "launchSettingsProfile": "https",
+            "launchSettingsProfile": "http",
             "launchBrowser": {
                 "enabled": true,
             },
