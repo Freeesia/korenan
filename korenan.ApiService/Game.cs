@@ -162,3 +162,16 @@ enum AnswerResultType
 /// <param name="CorrectPoint">正解時のポイント</param>
 /// <param name="LiarPoint">ライアープレイヤーを当てたときのポイント</param>
 record Config(int QuestionLimit = 5, int AnswerLimit = 3, int CorrectPoint = 20, int LiarPoint = 30);
+
+static class GameExtensions
+{
+    /// <summary>
+    /// 正解者を取得する
+    /// </summary>
+    /// <param name="round">対象のラウンド</param>
+    /// <returns>正解者一覧</returns>
+    public static IEnumerable<Guid> GetCorrectPlayers(this Round round)
+        => round.Histories
+            .Where(x => x.Result is AnswerResult answer && answer.Result == AnswerResultType.Correct)
+            .Select(x => x.Result.Player);
+}

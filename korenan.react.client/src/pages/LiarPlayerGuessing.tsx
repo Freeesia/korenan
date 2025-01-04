@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { SceneContext, UserContext } from "../App";
-import { LiarPlayerGuessingSceneInfo } from "../models";
+import { LiarGuessSceneInfo } from "../models";
 
 function LiarPlayerGuessing() {
   const scene = useContext(SceneContext);
@@ -10,7 +10,7 @@ function LiarPlayerGuessing() {
 
   const sceneInfo = () => {
     if (scene?.scene === "LiarPlayerGuessing") {
-      return scene?.info as LiarPlayerGuessingSceneInfo;
+      return scene?.info as LiarGuessSceneInfo;
     }
     return undefined;
   };
@@ -48,6 +48,15 @@ function LiarPlayerGuessing() {
   return (
     <div>
       <h1>ライアー推測タイム</h1>
+      <div>
+        <h2>正解のお題: {sceneInfo()?.topic}</h2>
+        <h2>正解者:</h2>
+        <ul>
+          {sceneInfo()?.topicCorrectPlayers.map((player, index) => (
+            <li key={index}>{getPlayerName(player)}</li>
+          ))}
+        </ul>
+      </div>
       <div>
         <h2>推測結果:</h2>
         <ul>

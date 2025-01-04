@@ -343,10 +343,7 @@ api.MapGet("/scene", () => new CurrentScene(
             => new QuestionAnsweringSceneInfo(
                 game.Rounds.Last().Histories.Select(h => h.Result).ToArray()),
         GameScene.LiarPlayerGuessing
-            => new LiarPlayerGuessingSceneInfo(
-                [.. game.Rounds.Last().LiarGuesses]),
-        GameScene.RoundSummary
-            => new RoundSummaryInfo(
+            => new LiarGuessSceneInfo(
                 game.Rounds.Last().Topic,
                 game.Rounds.Last()
                     .Histories
@@ -354,6 +351,13 @@ api.MapGet("/scene", () => new CurrentScene(
                     .OfType<AnswerResult>()
                     .Where(h => h.Result == AnswerResultType.Correct)
                     .Select(h => h.Player)
+                    .ToArray(),
+                [.. game.Rounds.Last().LiarGuesses]),
+        GameScene.RoundSummary
+            => new RoundSummaryInfo(
+                game.Rounds.Last().Topic,
+                game.Rounds.Last()
+                    .GetCorrectPlayers()
                     .ToArray(),
                 game.Rounds.Last()
                     .LiarGuesses
@@ -365,12 +369,7 @@ api.MapGet("/scene", () => new CurrentScene(
                 game.Rounds.Select(r =>
                     new RoundResult(
                         r.Topic,
-                        r.Histories
-                            .Select(h => h.Result)
-                            .OfType<AnswerResult>()
-                            .Where(h => h.Result == AnswerResultType.Correct)
-                            .Select(h => h.Player)
-                            .ToArray(),
+                        r.GetCorrectPlayers().ToArray(),
                         r.Liars,
                         r.LiarGuesses.Where(t => r.Liars.Contains(t.Target)).Select(t => t.Player).ToArray()))
                     .ToArray()),
@@ -430,14 +429,14 @@ record CurrentScene(GameScene Scene, int Round, Player[] Players, ISceneInfo Inf
 
 [JsonDerivedType(typeof(WaitRoundSceneInfo))]
 [JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
-[JsonDerivedType(typeof(LiarPlayerGuessingSceneInfo))]
+[JsonDerivedType(typeof(LiarGuessSceneInfo))]
 [JsonDerivedType(typeof(RoundSummaryInfo))]
 [JsonDerivedType(typeof(GameEndInfo))]
 interface ISceneInfo;
 
 record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
 record QuestionAnsweringSceneInfo(IPlayerResult[] Histories) : ISceneInfo;
-record LiarPlayerGuessingSceneInfo(LiarGuess[] Targets) : ISceneInfo;
+record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, LiarGuess[] Targets) : ISceneInfo;
 record RoundSummaryInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;

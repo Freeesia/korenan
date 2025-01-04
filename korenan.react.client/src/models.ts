@@ -56,7 +56,7 @@ export interface Player extends User {
 export type ISceneInfo =
   | WaitRoundSceneInfo
   | QuestionAnsweringSceneInfo
-  | LiarPlayerGuessingSceneInfo
+  | LiarGuessSceneInfo
   | RoundSummaryInfo
   | GameEndInfo;
 
@@ -68,7 +68,9 @@ export interface QuestionAnsweringSceneInfo {
   histories: IPlayerResult[];
 }
 
-export interface LiarPlayerGuessingSceneInfo {
+export interface LiarGuessSceneInfo {
+  topic: string;
+  topicCorrectPlayers: string[];
   targets: LiarGuess[];
 }
 
