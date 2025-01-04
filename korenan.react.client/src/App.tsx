@@ -58,25 +58,10 @@ function App() {
       if (!GameScene.includes(currentPath as GameScene)) {
         return;
       }
-      switch (scene.scene) {
-        case "WaitRoundStart":
-          navigate("/WaitRoundStart");
-          break;
-        case "QuestionAnswering":
-          navigate("/QuestionAnswering");
-          break;
-        case "LiarPlayerGuessing":
-          navigate("/LiarPlayerGuessing");
-          break;
-        case "RoundSummary":
-          navigate("/RoundSummary");
-          break;
-        case "GameEnd":
-          navigate("/GameEnd");
-          break;
-        default:
-          break;
+      if (scene.scene === currentPath) {
+        return;
       }
+      navigate(`/${scene.scene}`);
     }
   }, [scene, navigate, location]);
 
@@ -105,10 +90,7 @@ function App() {
             <Route path="/weather" element={<Weather />} />
             <Route path="/debug" element={<Debug />} />
             <Route path="/config" element={<Config />} />
-            <Route
-              path="/regist"
-              element={<RegistTopic />}
-            />
+            <Route path="/regist" element={<RegistTopic />} />
             <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
             <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
             <Route
