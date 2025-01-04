@@ -254,7 +254,7 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel,
     {
         round.Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty));
         player.Points += game.Config.CorrectPoint;
-        game = game with { CurrentScene = GameScene.LiarPlayerGuessing };
+        game = game with { CurrentScene = GameScene.LiarGuess };
         return AnswerResultType.Correct;
     }
     var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
@@ -302,7 +302,7 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel,
     if (res.Result == AnswerResultType.Correct)
     {
         player.Points += game.Config.CorrectPoint;
-        game = game with { CurrentScene = GameScene.LiarPlayerGuessing };
+        game = game with { CurrentScene = GameScene.LiarGuess };
     }
     return res.Result;
 });
@@ -342,7 +342,7 @@ api.MapGet("/scene", () => new CurrentScene(
         GameScene.QuestionAnswering
             => new QuestionAnsweringSceneInfo(
                 game.Rounds.Last().Histories.Select(h => h.Result).ToArray()),
-        GameScene.LiarPlayerGuessing
+        GameScene.LiarGuess
             => new LiarGuessSceneInfo(
                 game.Rounds.Last().Topic,
                 game.Rounds.Last()

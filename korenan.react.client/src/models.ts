@@ -99,7 +99,7 @@ export interface GameEndInfo {
 export const GameScene = [
   "WaitRoundStart",
   "QuestionAnswering",
-  "LiarPlayerGuessing",
+  "LiarGuess",
   "RoundSummary",
   "GameEnd",
 ] as const;

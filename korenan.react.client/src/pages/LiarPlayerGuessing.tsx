@@ -9,7 +9,7 @@ function LiarPlayerGuessing() {
   const [guessed, setGuessed] = useState(false);
 
   const sceneInfo = () => {
-    if (scene?.scene === "LiarPlayerGuessing") {
+    if (scene?.scene === "LiarGuess") {
       return scene?.info as LiarGuessSceneInfo;
     }
     return undefined;

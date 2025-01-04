@@ -26,7 +26,7 @@ enum GameScene
     /// <summary>
     /// プレイヤーが嘘をついているプレイヤーを推理するフェーズ
     /// </summary>
-    LiarPlayerGuessing,
+    LiarGuess,
 
     /// <summary>
     /// ラウンドの結果を表示するフェーズ
