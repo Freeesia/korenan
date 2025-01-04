@@ -1,8 +1,25 @@
-import { useContext } from "react";
-import { SceneContext } from "../App";
+import { useContext, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { SceneContext, UserContext } from "../App";
 
 function WaitRoundStart() {
   const scene = useContext(SceneContext);
+  const [user] = useContext(UserContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (scene && !scene.players.some((player) => player.id === user?.id)) {
+      navigate("/regist");
+    } else {
+      fetch("/api/scene", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify("WaitRoundStart"),
+      });
+    }
+  }, [scene, user]);
 
   const startRound = async () => {
     await fetch("/api/start", { method: "POST" });

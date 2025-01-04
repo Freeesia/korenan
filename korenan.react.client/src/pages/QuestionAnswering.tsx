@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { SceneContext } from "../App";
 import {
   QuestionAnsweringSceneInfo,
@@ -13,6 +13,16 @@ function QuestionAnswering() {
   const [qResponse, setQResponse] = useState<QuestionResponse>();
   const [aResponse, setAResponse] = useState<AnswerResponse>();
   const [isWaiting, setIsWaiting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/scene", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify("QuestionAnswering"),
+    });
+  }, []);
 
   const askQuestion = async () => {
     setIsWaiting(true);

@@ -1,9 +1,19 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { SceneContext } from "../App";
 import { RoundSummaryInfo } from "../models";
 
 function RoundSummary() {
   const scene = useContext(SceneContext);
+
+  useEffect(() => {
+    fetch("/api/scene", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify("RoundSummary"),
+    });
+  }, []);
 
   const sceneInfo = () => {
     if (scene?.scene === "RoundSummary") {
@@ -37,7 +47,7 @@ function RoundSummary() {
           <li key={player}>{getPlayerName(player)}</li>
         ))}
       </ul>
-      <button onClick={nextScene}>次へ</button>
+      <button onClick={nextScene}>次のシーンへ</button>
     </div>
   );
 }

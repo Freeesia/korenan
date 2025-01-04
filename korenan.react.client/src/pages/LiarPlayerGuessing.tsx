@@ -4,7 +4,7 @@ import { LiarPlayerGuessingSceneInfo } from "../models";
 
 function LiarPlayerGuessing() {
   const scene = useContext(SceneContext);
-  const [user, _] = useContext(UserContext);
+  const [user] = useContext(UserContext);
   const [guess, setGuess] = useState("");
   const [guessed, setGuessed] = useState(false);
 
@@ -14,6 +14,16 @@ function LiarPlayerGuessing() {
     }
     return undefined;
   };
+
+  useEffect(() => {
+    fetch("/api/scene", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify("LiarPlayerGuessing"),
+    });
+  }, []);
 
   const guessLiar = async () => {
     await fetch("/api/guess", {
