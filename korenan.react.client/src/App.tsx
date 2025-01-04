@@ -8,7 +8,6 @@ import {
 import { createContext, useState, useEffect } from "react";
 import "./App.css";
 import Home from "./pages/Home";
-import Weather from "./pages/Weather";
 import Debug from "./pages/Debug";
 import Config from "./pages/Config";
 import RegistTopic from "./pages/RegistTopic";
@@ -87,7 +86,6 @@ function App() {
           </nav>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/weather" element={<Weather />} />
             <Route path="/debug" element={<Debug />} />
             <Route path="/config" element={<Config />} />
             <Route path="/regist" element={<RegistTopic />} />
