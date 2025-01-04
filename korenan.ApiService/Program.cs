@@ -100,6 +100,10 @@ api.MapPost("/regist", (HttpContext context, [FromBody] RegistRequest req) =>
     {
         return Results.BadRequest("You have already registered.");
     }
+    if (string.IsNullOrEmpty(req.Topic))
+    {
+        return Results.BadRequest("Topic is required.");
+    }
     var player = new Player(user.Id, user.Name);
     game.Players.Add(player);
     game.Topics.Add(player.Id, req.Topic);
