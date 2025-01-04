@@ -43,7 +43,10 @@ function QuestionAnswering() {
   };
 
   const sceneInfo = () => {
-    return scene?.info as QuestionAnsweringSceneInfo;
+    if (scene?.scene === "QuestionAnswering") {
+      return scene?.info as QuestionAnsweringSceneInfo;
+    }
+    return undefined;
   };
 
   const getPlayerName = (id: string) => {
