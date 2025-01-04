@@ -1,10 +1,12 @@
-import { useContext, useState } from "react";
-import { SceneContext } from "../App";
+import { useContext, useEffect, useState } from "react";
+import { SceneContext, UserContext } from "../App";
 import { LiarPlayerGuessingSceneInfo } from "../models";
 
 function LiarPlayerGuessing() {
   const scene = useContext(SceneContext);
+  const [user, _] = useContext(UserContext);
   const [guess, setGuess] = useState("");
+  const [guessed, setGuessed] = useState(false);
 
   const sceneInfo = () => {
     if (scene?.scene === "LiarPlayerGuessing") {
@@ -21,11 +23,17 @@ function LiarPlayerGuessing() {
       },
       body: JSON.stringify(guess),
     });
+    setGuessed(true);
   };
 
-  const getPlayerName = (id: string) => {
-    return scene?.players.find((p) => p.id === id)?.name || id;
-  };
+  const getPlayerName = (id: string) =>
+    scene?.players.find((p) => p.id === id)?.name || id;
+
+  useEffect(() => {
+    if (sceneInfo()?.targets.findIndex((t) => t.player === user?.id) !== -1) {
+      setGuessed(true);
+    }
+  }, [scene]);
 
   return (
     <div>
@@ -35,13 +43,17 @@ function LiarPlayerGuessing() {
         <ul>
           {sceneInfo()?.targets.map((target, index) => (
             <li key={index}>
-              {getPlayerName(target.player)}: {getPlayerName(target.target)}
+              {getPlayerName(target.player)} ➡️ {getPlayerName(target.target)}
             </li>
           ))}
         </ul>
       </div>
       <div>
-        <select value={guess} onChange={(e) => setGuess(e.target.value)}>
+        <select
+          value={guess}
+          onChange={(e) => setGuess(e.target.value)}
+          disabled={guessed}
+        >
           <option value="">プレイヤーを選択</option>
           {scene?.players.map((player) => (
             <option key={player.id} value={player.id}>
@@ -49,7 +61,9 @@ function LiarPlayerGuessing() {
             </option>
           ))}
         </select>
-        <button onClick={guessLiar}>ライアー！</button>
+        <button onClick={guessLiar} disabled={guessed}>
+          ライアー！
+        </button>
       </div>
     </div>
   );
