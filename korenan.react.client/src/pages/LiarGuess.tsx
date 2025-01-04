@@ -26,14 +26,16 @@ function LiarGuess() {
   }, []);
 
   const guessLiar = async () => {
-    await fetch("/api/guess", {
+    const res = await fetch("/api/guess", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(guess),
     });
-    setGuessed(true);
+    if (res.ok) {
+      setGuessed(true);
+    }
   };
 
   const getPlayerName = (id: string) =>
@@ -80,7 +82,7 @@ function LiarGuess() {
             </option>
           ))}
         </select>
-        <button onClick={guessLiar} disabled={guessed}>
+        <button onClick={guessLiar} disabled={guessed || !guess}>
           ライアー！
         </button>
       </div>
