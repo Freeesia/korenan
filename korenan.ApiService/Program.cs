@@ -149,6 +149,10 @@ api.MapPost("/question", async (HttpContext context, [FromServices] Kernel kerne
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var round = game.Rounds.Last();
+    if (round.Histories.Select(h => h.Result).OfType<QuestionResult>().Count(h => h.Player == user.Id) > game.Config.QuestionLimit)
+    {
+        throw new InvalidOperationException("You have reached the answer limit.");
+    }
     var player = game.Players.First(p => p.Id == user.Id);
     var questionPrompt = new PromptTemplateConfig("""
         あなたは文章の校正を行うアシスタントです。
@@ -232,6 +236,10 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel,
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var round = game.Rounds.Last();
+    if (round.Histories.Select(h => h.Result).OfType<AnswerResult>().Count(h => h.Player == user.Id) > game.Config.AnswerLimit)
+    {
+        throw new InvalidOperationException("You have reached the answer limit.");
+    }
     var player = game.Players.First(p => p.Id == user.Id);
     if (input == round.Topic)
     {
@@ -286,7 +294,20 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] Kernel kernel,
     {
         player.Points += game.Config.CorrectPoint;
         game = game with { CurrentScene = GameScene.LiarGuess };
+        return AnswerResultType.Correct;
     }
+    // すべてのプレイヤーが解答制限に達した場合、ライアーを推理
+    var playerAnswers = round.Histories.Select(h => h.Result).OfType<AnswerResult>().GroupBy(h => h.Player).ToDictionary(g => g.Key, g => g.Count());
+    if (game.Players.Select(p => playerAnswers.TryGetValue(p.Id, out var count) ? count : 0).All(c => c >= game.Config.AnswerLimit))
+    {
+        var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => game.Players.First(pl => pl.Id == p.Key)).ToArray();
+        foreach (var liar in liars)
+        {
+            liar.Points += game.Config.NoCorrectPoint;
+        }
+        game = game with { CurrentScene = GameScene.LiarGuess };
+    }
+
     return res.Result;
 });
 

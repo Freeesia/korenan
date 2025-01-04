@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { SceneContext } from "../App";
+import { SceneContext, UserContext } from "../App";
 import {
   QuestionAnsweringSceneInfo,
   QuestionResultType,
@@ -7,15 +7,18 @@ import {
   IPlayerResult,
   AnswerResult,
   QuestionResult,
+  Config,
 } from "../models";
 
 function QuestionAnswering() {
   const scene = useContext(SceneContext);
+  const [user] = useContext(UserContext);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [qResult, setQResult] = useState<QuestionResultType>();
   const [aResult, setAResult] = useState<AnswerResultType>();
   const [isWaiting, setIsWaiting] = useState(false);
+  const [config, setConfig] = useState<Config>();
 
   useEffect(() => {
     fetch("/api/scene", {
@@ -25,7 +28,14 @@ function QuestionAnswering() {
       },
       body: JSON.stringify("QuestionAnswering"),
     });
+    fetchConfig();
   }, []);
+
+  const fetchConfig = async () => {
+    const res = await fetch("/api/config");
+    const data: Config = await res.json();
+    setConfig(data);
+  };
 
   const askQuestion = async () => {
     setIsWaiting(true);
@@ -70,6 +80,18 @@ function QuestionAnswering() {
   const getAnswerResult = (result: IPlayerResult) => result as AnswerResult;
   const getQuestionResult = (result: IPlayerResult) => result as QuestionResult;
 
+  const remainingQuestions =
+    (config?.questionLimit ?? 0) -
+    (sceneInfo()?.histories.filter(
+      (h) => h.type === "Question" && h.player === user?.id
+    ).length ?? 0);
+
+  const remainingAnswers =
+    (config?.answerLimit ?? 0) -
+    (sceneInfo()?.histories.filter(
+      (h) => h.type === "Answer" && h.player === user?.id
+    ).length ?? 0);
+
   return (
     <div>
       <h1>質問タイム</h1>
@@ -99,12 +121,16 @@ function QuestionAnswering() {
           placeholder="質問"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          disabled={isWaiting}
+          disabled={isWaiting || remainingQuestions <= 0}
         />
-        <button onClick={askQuestion} disabled={isWaiting}>
+        <button
+          onClick={askQuestion}
+          disabled={isWaiting || remainingQuestions <= 0}
+        >
           質問
         </button>
         <pre>{qResult}</pre>
+        <p>残りの質問回数: {remainingQuestions}</p>
       </div>
       <div>
         <input
@@ -112,12 +138,16 @@ function QuestionAnswering() {
           placeholder="解答"
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
-          disabled={isWaiting}
+          disabled={isWaiting || remainingAnswers <= 0}
         />
-        <button onClick={submitAnswer} disabled={isWaiting}>
+        <button
+          onClick={submitAnswer}
+          disabled={isWaiting || remainingAnswers <= 0}
+        >
           解答
         </button>
         <pre>{aResult}</pre>
+        <p>残りの解答回数: {remainingAnswers}</p>
       </div>
     </div>
   );

@@ -188,7 +188,8 @@ enum AnswerResultType
 /// <param name="AnswerLimit">プレイヤーのラウンド毎の解答上限</param>
 /// <param name="CorrectPoint">正解時のポイント</param>
 /// <param name="LiarPoint">ライアープレイヤーを当てたときのポイント</param>
-record Config(int QuestionLimit = 10, int AnswerLimit = 5, int CorrectPoint = 20, int LiarPoint = 30);
+/// <param name="NoCorrectPoint">正解者がいなかったときのポイント</param>
+record Config(int QuestionLimit = 10, int AnswerLimit = 5, int CorrectPoint = 20, int LiarPoint = 30, int NoCorrectPoint = -10);
 
 static class GameExtensions
 {
