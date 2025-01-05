@@ -155,11 +155,11 @@ function Debug() {
             placeholder="Guess Liar"
             value={guess}
             onChange={(e) => setGuess(e.target.value)}
-            disabled={scene?.scene !== "LiarPlayerGuessing"}
+            disabled={scene?.scene !== "LiarGuess"}
           />
           <button
             onClick={guessLiar}
-            disabled={scene?.scene !== "LiarPlayerGuessing"}
+            disabled={scene?.scene !== "LiarGuess"}
           >
             Guess Liar
           </button>

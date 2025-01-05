@@ -12,27 +12,25 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS with-node
 RUN apt-get update
 RUN apt-get install curl
-RUN curl -sL https://deb.nodesource.com/setup_20.x | bash
+RUN curl -sL https://deb.nodesource.com/setup_22.x | bash
 RUN apt-get -y install nodejs
 
 
 FROM with-node AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["korenan.react.Server/korenan.react.Server.csproj", "korenan.react.Server/"]
-COPY ["korenan.react.client/korenan.react.client.esproj", "korenan.react.client/"]
-RUN dotnet restore "./korenan.react.Server/korenan.react.Server.csproj"
 COPY . .
-WORKDIR "/src/korenan.react.Server"
-RUN dotnet build "./korenan.react.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet restore
+WORKDIR "/src/korenan.ApiService"
+RUN dotnet build "./korenan.ApiService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # このステージは、最終ステージにコピーするサービス プロジェクトを公開するために使用されます
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./korenan.react.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./korenan.ApiService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # このステージは、運用環境または VS から通常モードで実行している場合に使用されます (デバッグ構成を使用しない場合の既定)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "korenan.react.Server.dll"]
+ENTRYPOINT ["dotnet", "korenan.ApiService.dll"]
