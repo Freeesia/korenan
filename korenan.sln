@@ -8,8 +8,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "korenan.ServiceDefaults", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "korenan.ApiService", "korenan.ApiService\korenan.ApiService.csproj", "{BC5D4134-BFAC-4B40-B7A2-E98463C1BBAD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "korenan.Web", "korenan.Web\korenan.Web.csproj", "{113711BF-EFC5-4EF4-BA08-88965CD9CF3D}"
-EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "korenan.react.client", "korenan.react.client\korenan.react.client.esproj", "{B8F678A7-C00F-4B17-AE2D-4F870FAF4A22}"
 EndProject
 Global
@@ -30,10 +28,6 @@ Global
 		{BC5D4134-BFAC-4B40-B7A2-E98463C1BBAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC5D4134-BFAC-4B40-B7A2-E98463C1BBAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC5D4134-BFAC-4B40-B7A2-E98463C1BBAD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{113711BF-EFC5-4EF4-BA08-88965CD9CF3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{113711BF-EFC5-4EF4-BA08-88965CD9CF3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{113711BF-EFC5-4EF4-BA08-88965CD9CF3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{113711BF-EFC5-4EF4-BA08-88965CD9CF3D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B8F678A7-C00F-4B17-AE2D-4F870FAF4A22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B8F678A7-C00F-4B17-AE2D-4F870FAF4A22}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8F678A7-C00F-4B17-AE2D-4F870FAF4A22}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
