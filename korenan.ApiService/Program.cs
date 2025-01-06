@@ -99,6 +99,10 @@ api.MapPost("/start", async ([FromServices] Kernel kernel) =>
         return Results.BadRequest("Some players are not ready.");
     }
     using var l = await roundLock.LockAsync();
+    if (game.Rounds.LastOrDefault() is { LiarGuesses.Count: 0 })
+    {
+        return Results.BadRequest("直前のラウンドが終わっていません");
+    }
     await StartNextRound(kernel);
     return Results.Ok();
 });
@@ -107,6 +111,10 @@ api.MapPost("/next", async (HttpContext context, [FromServices] Kernel kernel) =
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     using var l = await roundLock.LockAsync();
+    if (game.Rounds.LastOrDefault() is { Liars.Length: 0 })
+    {
+        return Results.BadRequest("直前のラウンドが終わっていません");
+    }
     var player = game.Players.First(p => p.Id == user.Id);
     if (game.Topics.Count == game.Rounds.Count)
     {
