@@ -117,3 +117,13 @@ graph TD
 * [ ] お題を複数登録できるようにする
 * [ ] 後半はヒントを出す
 * [ ] お題作った人はラウンド開始時に自分が分かるとよいかも
+
+
+## ビルド回り
+
+### ビルド
+
+```bash
+docker buildx build -f korenan.ApiService/Dockerfile -t ghcr.io/freeesia/korenan:latest .
+docker push ghcr.io/freeesia/korenan:latest
+```
