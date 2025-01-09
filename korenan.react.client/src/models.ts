@@ -112,4 +112,5 @@ export interface Config {
   answerLimit: number;
   correctPoint: number;
   liarPoint: number;
+  noCorrectPoint: number;
 }
