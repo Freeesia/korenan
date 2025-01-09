@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Config } from "../models";
 
 function ConfigPage() {
-  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0 });
+  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0, noCorrectPoint: 0 });
 
   useEffect(() => {
     fetchConfig();
@@ -76,6 +76,19 @@ function ConfigPage() {
             value={config?.liarPoint}
             onChange={(e) =>
               setConfig({ ...config!, liarPoint: Number(e.target.value) })
+            }
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          No Correct Point:
+          <input
+            type="number"
+            disabled={!config}
+            value={config?.noCorrectPoint}
+            onChange={(e) =>
+              setConfig({ ...config!, noCorrectPoint: Number(e.target.value) })
             }
           />
         </label>
