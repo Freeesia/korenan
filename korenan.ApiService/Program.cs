@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using GoogleTrendsApi;
 using korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Session;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
@@ -24,6 +25,9 @@ var (modelId, apiKey, bingKey, _) = builder.Configuration.GetSection(nameof(Sema
 var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
     .AddGoogleAIEmbeddingGeneration(modelId, apiKey);
+
+builder.AddRedisDistributedCache("cache");
+
 builder.Services
     .AddHttpClient()
     .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
@@ -34,7 +38,6 @@ builder.Services
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
     .AddEndpointsApiExplorer()
     .AddSwaggerGen()
-    .AddDistributedMemoryCache()
     .AddSession(op =>
     {
         op.IdleTimeout = TimeSpan.FromDays(30);
@@ -52,6 +55,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseSession();
+
+var sm = app.Services.GetRequiredService<ISessionStore>();
 
 var game = new Game([], [], [], GameScene.WaitRoundStart, new());
 
@@ -393,7 +398,7 @@ api.MapPost("/scene", (HttpContext context, [FromBody] GameScene scene) =>
 });
 
 // プレイヤー情報取得
-api.MapGet("/me", (HttpContext context) => context.Session.Get<User>(nameof(User)) is { } u ? Results.Ok(u) : Results.NotFound());
+api.MapGet("/me", (HttpContext context) =>context.Session.Get<User>(nameof(User)) is { } u ? Results.Ok(u) : Results.NotFound());
 
 // ゲームリセット
 api.MapPost("/reset", () =>
