@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using Genbox.Wikipedia;
@@ -7,7 +7,7 @@ using Microsoft.SemanticKernel;
 using MwParserFromScratch;
 using MwParserFromScratch.Nodes;
 
-namespace korenan.ApiService;
+namespace Korenan.ApiService;
 
 public sealed class WikipediaPlugin(HttpClient httpClient)
 {

@@ -6,7 +6,8 @@ import { useNavigate } from "react-router-dom";
 function RegistTopic() {
   const [user, setUser] = useContext(UserContext);
   const [name, setName] = useState(user?.name || "");
-  const [topic, setTopic] = useState("");
+    const [topic, setTopic] = useState("");
+    const [aikotoba, setAikotoba] = useState("");
   const navigate = useNavigate();
 
   const register = async () => {
@@ -15,7 +16,7 @@ function RegistTopic() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name, topic }),
+        body: JSON.stringify({ name, topic, aikotoba }),
     });
     const data: Player = await response.json();
     setUser(data);
@@ -34,6 +35,17 @@ function RegistTopic() {
           onChange={(e) => setName(e.target.value)}
         />
       </div>
+          <label>
+              一緒に遊ぶ友達と共有するためのあいことばを入力してください:
+        </label>
+        <div>
+            <input
+                type="text"
+                placeholder="あいことば"
+                  value={aikotoba}
+                  onChange={(e) => setAikotoba(e.target.value)}
+            />
+        </div>
       <label>
         お題を入力してください:(なるべく正式名称や名前が被らないお題を入れてください)
       </label>
@@ -45,7 +57,7 @@ function RegistTopic() {
           onChange={(e) => setTopic(e.target.value)}
         />
       </div>
-      <button onClick={register}>Register</button>
+      <button onClick={register}>参加！</button>
     </div>
   );
 }
