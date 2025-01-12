@@ -31,6 +31,7 @@ function WaitRoundStart() {
           ))}
         </ul>
       </div>
+      <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してください。</p>
       <button onClick={startRound}>ラウンド開始</button>
     </div>
   );
