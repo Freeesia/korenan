@@ -59,7 +59,6 @@ function App() {
       body: JSON.stringify(user.id),
     });
     setScene(undefined);
-    navigate("/");
   };
 
   useEffect(() => {
@@ -69,11 +68,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!scene) {
-      return;
-    }
     const currentPath = location.pathname.substring(1);
     if (currentPath === "debug") {
+      return;
+    }
+    if (!scene) {
+      navigate("/");
       return;
     }
     if (scene.scene === currentPath) {
