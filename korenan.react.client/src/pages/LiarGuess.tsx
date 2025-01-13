@@ -38,6 +38,16 @@ function LiarGuess() {
     }
   };
 
+  const banPlayer = async (playerId: string) => {
+    await fetch("/api/ban", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(playerId),
+    });
+  };
+
   const getPlayerName = (id: string) =>
     scene?.players.find((p) => p.id === id)?.name || id;
 
@@ -74,7 +84,7 @@ function LiarGuess() {
         <ul>
           {scene?.players.filter(player => !sceneInfo()?.targets.some(t => t.player === player.id)).map((player) => (
             <li key={player.id}>
-              {player.name}
+              {player.name} {scene?.players[0].id === user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
             </li>
           ))}
         </ul>
