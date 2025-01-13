@@ -275,7 +275,10 @@ api.MapPost("/question", async (HttpContext context, [FromServices] IBufferDistr
         new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<QuestionResponse>();
-    round.Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+    await cache.Update<Game>(
+        $"game/room/{game.Id}",
+        g => g.Rounds.Last().Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty)),
+        context.RequestAborted);
     return res.Result;
 });
 
@@ -294,12 +297,18 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
     {
         throw new InvalidOperationException("You have reached the answer limit.");
     }
-    var player = game.Players.First(p => p.Id == user.Id);
     if (input == round.Topic)
     {
-        round.Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty));
-        player.Points += game.Config.CorrectPoint;
-        await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.LiarGuess }, context.RequestAborted);
+        await cache.Update<Game>(
+            $"game/room/{game.Id}",
+            g =>
+            {
+                var player = g.Players.First(p => p.Id == user.Id);
+                player.Points += g.Config.CorrectPoint;
+                g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty));
+                return g with { CurrentScene = GameScene.LiarGuess };
+            },
+            context.RequestAborted);
         return AnswerResultType.Correct;
     }
     var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
@@ -343,23 +352,36 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
         new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<AnswerResponse>();
-    round.Histories.Add(new(new AnswerResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
     if (res.Result == AnswerResultType.Correct)
     {
-        player.Points += game.Config.CorrectPoint;
-        await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.LiarGuess }, context.RequestAborted);
+        await cache.Update<Game>(
+            $"game/room/{game.Id}",
+            g =>
+            {
+                var player = g.Players.First(p => p.Id == user.Id);
+                player.Points += g.Config.CorrectPoint;
+                g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
+                return g with { CurrentScene = GameScene.LiarGuess };
+            },
+            context.RequestAborted);
         return AnswerResultType.Correct;
     }
     // すべてのプレイヤーが解答制限に達した場合、ライアーを推理
     var playerAnswers = round.Histories.Select(h => h.Result).OfType<AnswerResult>().GroupBy(h => h.Player).ToDictionary(g => g.Key, g => g.Count());
     if (game.Players.Select(p => playerAnswers.TryGetValue(p.Id, out var count) ? count : 0).All(c => c >= game.Config.AnswerLimit))
     {
-        var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => game.Players.First(pl => pl.Id == p.Key)).ToArray();
-        foreach (var liar in liars)
-        {
-            liar.Points += game.Config.NoCorrectPoint;
-        }
-        await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.LiarGuess }, context.RequestAborted);
+        await cache.Update<Game>(
+            $"game/room/{game.Id}",
+            g =>
+            {
+                var liars = g.Topics.Where(p => round.Topic == p.Value).Select(p => g.Players.First(pl => pl.Id == p.Key)).ToArray();
+                foreach (var liar in liars)
+                {
+                    liar.Points += g.Config.NoCorrectPoint;
+                }
+                return g with { CurrentScene = GameScene.LiarGuess };
+            },
+            context.RequestAborted);
     }
 
     return res.Result;
