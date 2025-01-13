@@ -82,11 +82,20 @@ function LiarGuess() {
       <div>
         <h2>未回答プレイヤー:</h2>
         <ul>
-          {scene?.players.filter(player => !sceneInfo()?.targets.some(t => t.player === player.id)).map((player) => (
-            <li key={player.id}>
-              {player.name} {scene?.players[0].id === user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
-            </li>
-          ))}
+          {scene?.players
+            .filter(
+              (player) =>
+                !sceneInfo()?.targets.some((t) => t.player === player.id)
+            )
+            .map((player) => (
+              <li key={player.id}>
+                {player.name}{" "}
+                {scene?.players[0].id === user?.id &&
+                  player.id !== user?.id && (
+                    <button onClick={() => banPlayer(player.id)}>BAN</button>
+                  )}
+              </li>
+            ))}
         </ul>
       </div>
       <div>
