@@ -16,7 +16,7 @@ import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarGuess from "./pages/LiarGuess";
 import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
-import { CurrentScene, GameScene, User } from "./models";
+import { CurrentScene, User } from "./models";
 
 export const SceneContext = createContext<CurrentScene | undefined>(undefined);
 export const UserContext = createContext<[User | undefined, (u: User) => void]>(
@@ -32,6 +32,9 @@ function App() {
 
   const fetchScene = async () => {
     const response = await fetch("/api/scene");
+    if (!response.ok) {
+      return;
+    }
     const data = await response.json();
     setScene(data);
     setLastFetchTime(new Date());
@@ -52,16 +55,17 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (scene) {
-      const currentPath = location.pathname.substring(1);
-      if (!GameScene.includes(currentPath as GameScene)) {
-        return;
-      }
-      if (scene.scene === currentPath) {
-        return;
-      }
-      navigate(`/${scene.scene}`, { replace: true });
+    if (!scene) {
+      return;
     }
+    const currentPath = location.pathname.substring(1);
+    if (currentPath === "debug") {
+      return;
+    }
+    if (scene.scene === currentPath) {
+      return;
+    }
+    navigate(`/${scene.scene}`, { replace: true });
   }, [scene, location]);
 
   return (
@@ -72,9 +76,6 @@ function App() {
             <ul>
               <li>
                 <NavLink to="/">Home</NavLink>
-              </li>
-              <li>
-                <NavLink to="/weather">Weather</NavLink>
               </li>
               <li>
                 <NavLink to="/debug">Debug</NavLink>
