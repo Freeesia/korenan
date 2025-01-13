@@ -541,13 +541,16 @@ api.MapGet("/me", (HttpContext context) => context.Session.Get<User>(nameof(User
 // ゲームリセット
 api.MapPost("/reset", async (HttpContext context, [FromServices] IBufferDistributedCache cache) =>
 {
-    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
-    var room = await cache.GetStringAsync($"user/{user.Id}/room", context.RequestAborted);
-    if (string.IsNullOrEmpty(room))
+    var game = await GetCurrentGame(context, cache);
+    if (game is null)
     {
         return Results.NotFound();
     }
-    await cache.RemoveAsync($"game/room/{room}", context.RequestAborted);
+    foreach (var player in game.Players)
+    {
+        await cache.RemoveAsync($"user/{player.Id}/room", context.RequestAborted);
+    }
+    await cache.RemoveAsync($"game/room/{game.Id}", context.RequestAborted);
     return Results.Ok();
 });
 
