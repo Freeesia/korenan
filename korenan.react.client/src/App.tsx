@@ -48,6 +48,19 @@ function App() {
     }
   };
 
+  const leaveGame = async () => {
+    if (!user) return;
+    await fetch("/api/ban", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(user.id),
+    });
+    setScene(undefined);
+    navigate("/");
+  };
+
   useEffect(() => {
     fetchUser();
     const interval = setInterval(fetchScene, 1000);
@@ -83,6 +96,11 @@ function App() {
               <li>
                 <NavLink to="/config">Config</NavLink>
               </li>
+              {scene && (
+                <li style={{ marginLeft: "auto" }}>
+                  <button onClick={leaveGame}>ゲームを抜ける</button>
+                </li>
+              )}
             </ul>
           </nav>
           <Routes>
