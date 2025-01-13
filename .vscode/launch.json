@@ -27,16 +27,19 @@
             "name": "Server",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
+            "preLaunchTask": "pre-debug",
             "program": "${workspaceFolder}/korenan.ApiService/bin/Debug/net8.0/korenan.ApiService.dll",
             "cwd": "${workspaceFolder}/korenan.ApiService",
             "console": "internalConsole",
             "stopAtEntry": false,
-            "launchSettingsProfile": "http",
+            "launchSettingsProfile": "https",
             "launchBrowser": {
                 "enabled": true,
             },
             "envFile": "${workspaceFolder}/.env",
+            "env": {
+                "ConnectionStrings__cache": "localhost"
+            },
             "requireExactSource": false
         },
         {

@@ -36,6 +36,25 @@
                 "${workspaceFolder}/korenan.sln"
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "compose-up",
+            "type": "docker-compose",
+            "dockerCompose": {
+                "up": {
+                    "detached": true,
+                },
+                "files": [
+                    "${workspaceFolder}/compose.debug.yml"
+                ]
+            }
+        },
+        {
+            "label": "pre-debug",
+            "dependsOn": [
+                "compose-up",
+                "build"
+            ],
         }
     ]
 }
