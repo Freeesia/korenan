@@ -70,6 +70,16 @@ function LiarGuess() {
         </ul>
       </div>
       <div>
+        <h2>未回答プレイヤー:</h2>
+        <ul>
+          {scene?.players.filter(player => !sceneInfo()?.targets.some(t => t.player === player.id)).map((player) => (
+            <li key={player.id}>
+              {player.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
         <select
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
