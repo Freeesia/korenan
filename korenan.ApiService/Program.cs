@@ -428,8 +428,13 @@ api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistribute
     {
         game.Players.Remove(player);
     }
+    else
+    {
+        return Results.BadRequest("You can't ban this player.");
+    }
     await cache.RemoveAsync($"user/{target}/room");
     await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
+    return Results.Ok();
 });
 
 // シーン情報取得
