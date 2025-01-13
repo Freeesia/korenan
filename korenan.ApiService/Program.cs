@@ -352,6 +352,10 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
         new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<AnswerResponse>();
+    await cache.Update<Game>(
+        $"game/room/{game.Id}",
+        g => g.Rounds.Last().Histories.Add(new(new AnswerResult(user.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty)),
+        context.RequestAborted);
     if (res.Result == AnswerResultType.Correct)
     {
         await cache.Update<Game>(
@@ -360,7 +364,6 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
             {
                 var player = g.Players.First(p => p.Id == user.Id);
                 player.Points += g.Config.CorrectPoint;
-                g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty));
                 return g with { CurrentScene = GameScene.LiarGuess };
             },
             context.RequestAborted);
