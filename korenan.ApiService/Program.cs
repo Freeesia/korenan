@@ -428,6 +428,7 @@ api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistribute
     {
         game.Players.Remove(player);
     }
+    await cache.RemoveAsync($"user/{target}/room");
     await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
 });
 
