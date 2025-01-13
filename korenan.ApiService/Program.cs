@@ -414,6 +414,23 @@ api.MapPost("/guess", async (HttpContext context, [FromServices] IBufferDistribu
     await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.RoundSummary }, context.RequestAborted);
 });
 
+// プレイヤーのバン
+api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] Guid target) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
+    var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
+    var player = game.Players.First(p => p.Id == user.Id);
+    if (game.Players.IndexOf(player) == 0)
+    {
+        game.Players.RemoveAll(p => p.Id == target);
+    }
+    else if (player.Id == target)
+    {
+        game.Players.Remove(player);
+    }
+    await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
+});
+
 // シーン情報取得
 api.MapGet("/scene", async (HttpContext context, [FromServices] IBufferDistributedCache cache)
     => await GetCurrentGame(context, cache) is not { } game
