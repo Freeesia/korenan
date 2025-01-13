@@ -462,6 +462,11 @@ api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistribute
     {
         return Results.BadRequest("You can't ban this player.");
     }
+    // バンされたプレイヤーのお題が使われていない場合、お題を削除
+    if (game.Rounds.All(r => !r.Liars.Contains(target)))
+    {
+        game.Topics.Remove(target);
+    }
     await cache.RemoveAsync($"user/{target}/room");
     await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
     await NextScene(cache, game, kernel, context.RequestAborted);
