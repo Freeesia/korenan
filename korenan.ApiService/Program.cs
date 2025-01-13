@@ -92,6 +92,74 @@ static async Task<Game?> GetGameFromUser(User user, IBufferDistributedCache cach
     }
     return await cache.Get<Game>($"game/room/{room}", token);
 }
+static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel kernel, CancellationToken token = default)
+{
+    switch (game.CurrentScene)
+    {
+        case GameScene.WaitRoundStart:
+            break;
+        case GameScene.QuestionAnswering:
+            {
+                var round = game.Rounds.Last();
+                // すべてのプレイヤーが解答制限に達した場合、ライアーを推理
+                var playerAnswers = round.Histories.Select(h => h.Result).OfType<AnswerResult>().GroupBy(h => h.Player).ToDictionary(g => g.Key, g => g.Count());
+                if (game.Players.Select(p => playerAnswers.TryGetValue(p.Id, out var count) ? count : 0).Any(c => c < game.Config.AnswerLimit))
+                {
+                    break;
+                }
+                await cache.Update<Game>(
+                    $"game/room/{game.Id}",
+                    g =>
+                    {
+                        var liars = g.Topics.Where(p => round.Topic == p.Value).Select(p => g.Players.First(pl => pl.Id == p.Key)).ToArray();
+                        foreach (var liar in liars)
+                        {
+                            liar.Points += g.Config.NoCorrectPoint;
+                        }
+                        return g with { CurrentScene = GameScene.LiarGuess };
+                    },
+                    token);
+            }
+            break;
+        case GameScene.LiarGuess:
+            {
+                var round = game.Rounds.Last();
+                if (round.LiarGuesses.Count != game.Players.Count)
+                {
+                    return;
+                }
+                var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
+                foreach (var p in game.Players)
+                {
+                    var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
+                    if (liars.Contains(liar.Target))
+                    {
+                        p.Points += game.Config.CorrectPoint;
+                    }
+                }
+                await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.RoundSummary }, token);
+            }
+            break;
+        case GameScene.RoundSummary:
+            {
+                if (game.Players.Any(p => p.CurrentScene != GameScene.WaitRoundStart))
+                {
+                    return;
+                }
+                if (game.Topics.Count == game.Rounds.Count)
+                {
+                    await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.GameEnd }, token);
+                }
+                else
+                {
+                    await StartNextRound(game, kernel, cache, token);
+                }
+            }
+            break;
+        case GameScene.GameEnd:
+            break;
+    }
+}
 
 // プレイヤー・お題登録
 api.MapPost("/regist", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] RegistRequest req) =>
@@ -162,21 +230,13 @@ api.MapPost("/next", async (HttpContext context, [FromServices] IBufferDistribut
         return Results.BadRequest("直前のラウンドが終わっていません");
     }
     var player = game.Players.First(p => p.Id == user.Id);
-    if (game.Topics.Count == game.Rounds.Count)
-    {
-        player.CurrentScene = GameScene.GameEnd;
-        game = game with { CurrentScene = GameScene.GameEnd };
-        return Results.Ok();
-    }
     player.CurrentScene = GameScene.WaitRoundStart;
-    if (game.Players.All(p => p.CurrentScene == GameScene.WaitRoundStart))
-    {
-        await StartNextRound(game, kernel, cache, context.RequestAborted);
-    }
+    await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
+    await NextScene(cache, game, kernel, context.RequestAborted);
     return Results.Ok();
 });
 
-async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCache cache, CancellationToken token = default)
+static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCache cache, CancellationToken token = default)
 {
     var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
     var topic = topics[Random.Shared.Next(topics.Length)];
@@ -369,53 +429,23 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
             context.RequestAborted);
         return AnswerResultType.Correct;
     }
-    // すべてのプレイヤーが解答制限に達した場合、ライアーを推理
-    var playerAnswers = round.Histories.Select(h => h.Result).OfType<AnswerResult>().GroupBy(h => h.Player).ToDictionary(g => g.Key, g => g.Count());
-    if (game.Players.Select(p => playerAnswers.TryGetValue(p.Id, out var count) ? count : 0).All(c => c >= game.Config.AnswerLimit))
-    {
-        await cache.Update<Game>(
-            $"game/room/{game.Id}",
-            g =>
-            {
-                var liars = g.Topics.Where(p => round.Topic == p.Value).Select(p => g.Players.First(pl => pl.Id == p.Key)).ToArray();
-                foreach (var liar in liars)
-                {
-                    liar.Points += g.Config.NoCorrectPoint;
-                }
-                return g with { CurrentScene = GameScene.LiarGuess };
-            },
-            context.RequestAborted);
-    }
-
+    await NextScene(cache, game, kernel, context.RequestAborted);
     return res.Result;
 });
 
 // 嘘をついているプレイヤーの推理
-api.MapPost("/guess", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] Guid target) =>
+api.MapPost("/guess", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromServices] Kernel kernel, [FromBody] Guid target) =>
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
     var round = game.Rounds.Last();
     round.LiarGuesses.Add(new(user.Id, target));
     await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
-    if (round.LiarGuesses.Count != game.Players.Count)
-    {
-        return;
-    }
-    var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
-    foreach (var p in game.Players)
-    {
-        var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
-        if (liars.Contains(liar.Target))
-        {
-            p.Points += game.Config.CorrectPoint;
-        }
-    }
-    await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.RoundSummary }, context.RequestAborted);
+    await NextScene(cache, game, kernel, context.RequestAborted);
 });
 
 // プレイヤーのバン
-api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] Guid target) =>
+api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromServices] Kernel kernel, [FromBody] Guid target) =>
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
@@ -434,6 +464,7 @@ api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistribute
     }
     await cache.RemoveAsync($"user/{target}/room");
     await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
+    await NextScene(cache, game, kernel, context.RequestAborted);
     return Results.Ok();
 });
 
