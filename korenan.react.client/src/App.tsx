@@ -33,6 +33,7 @@ function App() {
   const fetchScene = async () => {
     const response = await fetch("/api/scene");
     if (!response.ok) {
+      setScene(undefined);
       return;
     }
     const data = await response.json();
