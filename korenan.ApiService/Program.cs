@@ -397,6 +397,7 @@ api.MapPost("/guess", async (HttpContext context, [FromServices] IBufferDistribu
     var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
     var round = game.Rounds.Last();
     round.LiarGuesses.Add(new(user.Id, target));
+    await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
     if (round.LiarGuesses.Count != game.Players.Count)
     {
         return;
