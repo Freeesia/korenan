@@ -18,9 +18,27 @@ function WaitRoundStart() {
     await fetch("/api/start", { method: "POST" });
   };
 
+  const shareAikotoba = () => {
+    const url = `${window.location.origin}/regist?aikotoba=${scene?.aikotoba}`;
+    if (navigator.share) {
+      navigator.share({
+        title: 'これなんに招待',
+        text: `一緒に遊ぼう！合言葉: ${scene?.aikotoba}\nこちらのURLから参加してね:`,
+        url,
+      });
+    } else {
+      navigator.clipboard.writeText(url);
+      alert("招待URLをクリップボードにコピーしました。");
+    }
+  };
+
   return (
     <div>
       <h1>プレイヤー待機中</h1>
+      <div>
+        <h2>あいことば:</h2>
+        <p>「{scene?.aikotoba}」 <button onClick={shareAikotoba}>共有</button></p>
+      </div>
       <div>
         <h2>参加プレイヤー:</h2>
         <ul>
