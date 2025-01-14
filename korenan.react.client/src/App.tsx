@@ -72,14 +72,11 @@ function App() {
     if (currentPath === "debug") {
       return;
     }
-    if (!scene) {
-      navigate("/");
+    const paga = scene?.scene ?? "";
+    if (paga === currentPath) {
       return;
     }
-    if (scene.scene === currentPath) {
-      return;
-    }
-    navigate(`/${scene.scene}`, { replace: true });
+    navigate(`/${paga}`, { replace: true });
   }, [scene, location]);
 
   return (
