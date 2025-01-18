@@ -28,11 +28,17 @@ function RegistTopic() {
       },
       body: JSON.stringify({ name, topic, aikotoba }),
     });
+    if (!response.ok) {
+      alert("登録に失敗しました");
+      return;
+    }
     const data: Player = await response.json();
     setUser(data);
     await startFetchingScene();
     navigate("/WaitRoundStart");
   };
+
+  const isFormValid = name && topic && aikotoba;
 
   return (
     <div>
@@ -41,9 +47,9 @@ function RegistTopic() {
       <div>
         <input
           type="text"
-          id="name"
+          id="username"
           placeholder="プレイヤー名"
-          autoComplete="username"
+          autoComplete="on"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -72,7 +78,7 @@ function RegistTopic() {
           onChange={(e) => setTopic(e.target.value)}
         />
       </div>
-      <button onClick={register}>参加！</button>
+      <button onClick={register} disabled={!isFormValid}>参加！</button>
     </div>
   );
 }
