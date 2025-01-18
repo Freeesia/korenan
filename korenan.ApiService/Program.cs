@@ -468,9 +468,17 @@ api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistribute
         game.Topics.Remove(target);
     }
     await cache.RemoveAsync($"user/{target}/room");
-    await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
-    await NextScene(cache, game, kernel, context.RequestAborted);
-    return Results.Ok();
+    if (game.Players.Count == 0)
+    {
+        await cache.RemoveAsync($"game/room/{game.Id}");
+        return Results.Ok();
+    }
+    else
+    {
+        await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
+        await NextScene(cache, game, kernel, context.RequestAborted);
+        return Results.Ok();
+    }
 });
 
 // シーン情報取得
