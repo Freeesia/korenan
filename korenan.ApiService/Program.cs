@@ -470,6 +470,7 @@ api.MapPost("/ban", async (HttpContext context, [FromServices] IBufferDistribute
     await cache.RemoveAsync($"user/{target}/room");
     if (game.Players.Count == 0)
     {
+        await cache.RemoveAsync($"game/aikotoba/{game.Aikotoba}");
         await cache.RemoveAsync($"game/room/{game.Id}");
         return Results.Ok();
     }
