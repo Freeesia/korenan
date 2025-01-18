@@ -234,7 +234,7 @@ api.MapPost("/next", async (HttpContext context, [FromServices] IBufferDistribut
     }
     game = await cache.Update<Game>($"game/room/{game.Id}", g =>
     {
-        var player = game.Players.First(p => p.Id == user.Id);
+        var player = g.Players.First(p => p.Id == user.Id);
         player.CurrentScene = GameScene.WaitRoundStart;
         return g;
     }, context.RequestAborted);
