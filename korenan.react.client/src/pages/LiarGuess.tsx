@@ -21,7 +21,7 @@ function LiarGuess() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify("LiarPlayerGuessing"),
+      body: JSON.stringify("LiarGuess"),
     });
   }, []);
 
