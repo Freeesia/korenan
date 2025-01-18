@@ -359,7 +359,7 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
     }
     if (input == round.Topic)
     {
-        await cache.Update<Game>(
+        game = await cache.Update<Game>(
             $"game/room/{game.Id}",
             g =>
             {
@@ -412,13 +412,13 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
         new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
 
     var res = result.GetFromJson<AnswerResponse>();
-    await cache.Update<Game>(
+    game = await cache.Update<Game>(
         $"game/room/{game.Id}",
         g => g.Rounds.Last().Histories.Add(new(new AnswerResult(user.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty)),
         context.RequestAborted);
     if (res.Result == AnswerResultType.Correct)
     {
-        await cache.Update<Game>(
+        game = await cache.Update<Game>(
             $"game/room/{game.Id}",
             g =>
             {
