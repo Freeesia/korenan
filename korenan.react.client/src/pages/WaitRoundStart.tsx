@@ -62,7 +62,7 @@ function WaitRoundStart() {
       <button onClick={startRound}>ラウンド開始</button>
       <button onClick={openConfigDialog}>設定を開く</button>
       <dialog ref={configDialogRef}>
-        <Config />
+        <Config onClose={closeConfigDialog} />
         <button onClick={closeConfigDialog}>閉じる</button>
       </dialog>
     </div>

@@ -104,7 +104,6 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/debug" element={<Debug />} />
-            <Route path="/config" element={<Config />} />
             <Route path="/regist" element={<RegistTopic />} />
             <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
             <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
