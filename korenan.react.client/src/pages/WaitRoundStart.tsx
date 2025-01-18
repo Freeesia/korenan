@@ -1,8 +1,10 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { SceneContext } from "../App";
+import Config from "./Config";
 
 function WaitRoundStart() {
   const scene = useContext(SceneContext);
+  const configDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     fetch("/api/scene", {
@@ -32,6 +34,14 @@ function WaitRoundStart() {
     }
   };
 
+  const openConfigDialog = () => {
+    configDialogRef.current?.showModal();
+  };
+
+  const closeConfigDialog = () => {
+    configDialogRef.current?.close();
+  };
+
   return (
     <div>
       <h1>プレイヤー待機中</h1>
@@ -50,6 +60,11 @@ function WaitRoundStart() {
         </ul>
       </div>
       <button onClick={startRound}>ラウンド開始</button>
+      <button onClick={openConfigDialog}>設定を開く</button>
+      <dialog ref={configDialogRef}>
+        <Config />
+        <button onClick={closeConfigDialog}>閉じる</button>
+      </dialog>
     </div>
   );
 }
