@@ -16,10 +16,16 @@ function Home() {
     setConfig(data);
   };
 
+  const regist = () => {
+    document.startViewTransition(() => {
+      navigate("/regist");
+    });
+  };
+
   return (
     <div>
       <h1>これなーんだ❓(ライアー)</h1>
-      <button onClick={() => navigate("/regist")}>参加！</button>
+      <button onClick={regist}>参加！</button>
       <h2>遊び方</h2>
       <ol>
         <li>各プレイヤーが自分の名前とお題を登録します。</li>

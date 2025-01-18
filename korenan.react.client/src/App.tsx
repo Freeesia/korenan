@@ -98,7 +98,9 @@ function App() {
     if (page === currentPath) {
       return;
     }
-    navigate(`/${page}`, { replace: true });
+    document.startViewTransition(() => {
+      navigate(`/${page}`, { replace: true });
+    });
   }, [scene, location]);
 
   return (
