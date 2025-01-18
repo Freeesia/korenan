@@ -9,7 +9,6 @@ import { createContext, useState, useEffect } from "react";
 import "./App.css";
 import Home from "./pages/Home";
 import Debug from "./pages/Debug";
-import Config from "./pages/Config";
 import RegistTopic from "./pages/RegistTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
 import QuestionAnswering from "./pages/QuestionAnswering";
