@@ -123,7 +123,7 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
         case GameScene.LiarGuess:
             {
                 var round = game.Rounds.Last();
-                if (round.LiarGuesses.Count != game.Players.Count)
+                if (game.Players.ExceptBy(round.LiarGuesses.Select(t => t.Player), p => p.Id).Any())
                 {
                     return;
                 }
