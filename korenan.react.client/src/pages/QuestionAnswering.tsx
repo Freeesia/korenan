@@ -11,7 +11,7 @@ import {
 } from "../models";
 
 function QuestionAnswering() {
-  const scene = useContext(SceneContext);
+  const [scene] = useContext(SceneContext);
   const [user] = useContext(UserContext);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");

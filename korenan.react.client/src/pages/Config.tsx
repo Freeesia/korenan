@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Config } from "../models";
 
-function ConfigPage() {
+function ConfigPage({ onClose }: { onClose: () => void }) {
   const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0, noCorrectPoint: 0 });
 
   useEffect(() => {
@@ -15,14 +15,16 @@ function ConfigPage() {
   };
 
   const updateConfig = async () => {
-    await fetch("/api/config", {
+    const response = await fetch("/api/config", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(config),
     });
-    await fetchConfig();
+    if (response.ok) {
+      onClose();
+    }
   };
 
   return (

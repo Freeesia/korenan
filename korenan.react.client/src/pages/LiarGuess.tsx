@@ -3,7 +3,7 @@ import { SceneContext, UserContext } from "../App";
 import { LiarGuessSceneInfo } from "../models";
 
 function LiarGuess() {
-  const scene = useContext(SceneContext);
+  const [scene] = useContext(SceneContext);
   const [user] = useContext(UserContext);
   const [guess, setGuess] = useState("");
   const [guessed, setGuessed] = useState(false);
@@ -21,7 +21,7 @@ function LiarGuess() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify("LiarPlayerGuessing"),
+      body: JSON.stringify("LiarGuess"),
     });
   }, []);
 
@@ -36,6 +36,16 @@ function LiarGuess() {
     if (res.ok) {
       setGuessed(true);
     }
+  };
+
+  const banPlayer = async (playerId: string) => {
+    await fetch("/api/ban", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(playerId),
+    });
   };
 
   const getPlayerName = (id: string) =>
@@ -67,6 +77,25 @@ function LiarGuess() {
               {getPlayerName(target.player)} ➡️ {getPlayerName(target.target)}
             </li>
           ))}
+        </ul>
+      </div>
+      <div>
+        <h2>未回答プレイヤー:</h2>
+        <ul>
+          {scene?.players
+            .filter(
+              (player) =>
+                !sceneInfo()?.targets.some((t) => t.player === player.id)
+            )
+            .map((player) => (
+              <li key={player.id}>
+                {player.name}{" "}
+                {scene?.players[0].id === user?.id &&
+                  player.id !== user?.id && (
+                    <button onClick={() => banPlayer(player.id)}>BAN</button>
+                  )}
+              </li>
+            ))}
         </ul>
       </div>
       <div>

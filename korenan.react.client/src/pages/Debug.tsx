@@ -4,7 +4,7 @@ import { AnswerResult, Player, QuestionResult } from "../models";
 import { SceneContext, UserContext } from "../App";
 
 function Debug() {
-  const scene = useContext(SceneContext);
+  const [scene] = useContext(SceneContext);
   const [user, setUser] = useContext(UserContext);
   const [registResponse, setRegistResponse] = useState<Player>();
   const [questionResponse, setQuestionResponse] = useState<QuestionResult>();

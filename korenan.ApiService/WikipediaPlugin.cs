@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using Genbox.Wikipedia;
@@ -7,7 +7,7 @@ using Microsoft.SemanticKernel;
 using MwParserFromScratch;
 using MwParserFromScratch.Nodes;
 
-namespace korenan.ApiService;
+namespace Korenan.ApiService;
 
 public sealed class WikipediaPlugin(HttpClient httpClient)
 {
@@ -49,8 +49,8 @@ public sealed class WikipediaPlugin(HttpClient httpClient)
         {
             var secNode = doc.Lines.OfType<Heading>().FirstOrDefault(h => h.ToPlainText() == sec);
             var sectionText = new StringBuilder();
-            var node = secNode.NextNode;
-            while (node is not Heading)
+            var node = secNode?.NextNode;
+            while (node is not Heading and not null)
             {
                 sectionText.AppendLine(node.ToPlainText(NodePlainTextOptions.RemoveRefTags));
                 node = node.NextNode;

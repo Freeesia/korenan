@@ -5,20 +5,21 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useRef } from "react";
 import "./App.css";
 import Home from "./pages/Home";
 import Debug from "./pages/Debug";
-import Config from "./pages/Config";
 import RegistTopic from "./pages/RegistTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
 import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarGuess from "./pages/LiarGuess";
 import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
-import { CurrentScene, GameScene, User } from "./models";
+import { CurrentScene, User } from "./models";
 
-export const SceneContext = createContext<CurrentScene | undefined>(undefined);
+export const SceneContext = createContext<
+  [CurrentScene | undefined, () => Promise<void>]
+>([undefined, async () => {}]);
 export const UserContext = createContext<[User | undefined, (u: User) => void]>(
   [undefined, () => {}]
 );
@@ -29,9 +30,18 @@ function App() {
   const [lastFetchTime, setLastFetchTime] = useState<Date>();
   const navigate = useNavigate();
   const location = useLocation();
+  const intervalId = useRef<NodeJS.Timeout>(undefined);
 
   const fetchScene = async () => {
     const response = await fetch("/api/scene");
+    if (response.status === 404) {
+      stopFetchingScene();
+      setScene(undefined);
+      return;
+    }
+    if (!response.ok) {
+      return;
+    }
     const data = await response.json();
     setScene(data);
     setLastFetchTime(new Date());
@@ -45,49 +55,71 @@ function App() {
     }
   };
 
+  const leaveGame = async () => {
+    if (!user) return;
+    await fetch("/api/ban", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(user.id),
+    });
+    setScene(undefined);
+  };
+
+  const startFetchingScene = async () => {
+    await fetchScene();
+    if (!intervalId.current) {
+      intervalId.current = setInterval(fetchScene, 1000);
+    }
+  };
+
+  const stopFetchingScene = () => {
+    const id = intervalId.current;
+    intervalId.current = undefined;
+    clearInterval(id);
+  };
+
   useEffect(() => {
     fetchUser();
-    const interval = setInterval(fetchScene, 1000);
-    return () => clearInterval(interval);
+    startFetchingScene();
+    return stopFetchingScene;
   }, []);
 
   useEffect(() => {
-    if (scene) {
-      const currentPath = location.pathname.substring(1);
-      if (!GameScene.includes(currentPath as GameScene)) {
-        return;
-      }
-      if (scene.scene === currentPath) {
-        return;
-      }
-      navigate(`/${scene.scene}`, { replace: true });
+    const currentPath = location.pathname.substring(1);
+    if (currentPath === "debug") {
+      return;
     }
+    if (currentPath === "regist" && !scene) {
+      return;
+    }
+    const page = scene?.scene ?? "";
+    if (page === currentPath) {
+      return;
+    }
+    navigate(`/${page}`, { replace: true });
   }, [scene, location]);
 
   return (
-    <SceneContext value={scene}>
+    <SceneContext value={[scene, startFetchingScene]}>
       <UserContext value={[user, setUser]}>
         <div className="app-container">
           <nav>
             <ul>
               <li>
-                <NavLink to="/">Home</NavLink>
-              </li>
-              <li>
-                <NavLink to="/weather">Weather</NavLink>
-              </li>
-              <li>
                 <NavLink to="/debug">Debug</NavLink>
               </li>
-              <li>
-                <NavLink to="/config">Config</NavLink>
-              </li>
+              {scene && (
+                <li style={{ marginLeft: "auto" }}>
+                  <button onClick={leaveGame}>ゲームを抜ける</button>
+                </li>
+              )}
             </ul>
           </nav>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/debug" element={<Debug />} />
-            <Route path="/config" element={<Config />} />
             <Route path="/regist" element={<RegistTopic />} />
             <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
             <Route path="/QuestionAnswering" element={<QuestionAnswering />} />

@@ -3,7 +3,7 @@ import { SceneContext } from "../App";
 import { RoundSummaryInfo } from "../models";
 
 function RoundSummary() {
-  const scene = useContext(SceneContext);
+  const [scene] = useContext(SceneContext);
 
   useEffect(() => {
     fetch("/api/scene", {

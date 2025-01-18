@@ -1,6 +1,12 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var apiService = builder.AddProject<Projects.korenan_ApiService>("apiservice");
+
+var cache = builder.AddRedis("cache")
+    .WithDataVolume()
+    .WithPersistence();
+
+var apiService = builder.AddProject<Projects.korenan_ApiService>("apiservice")
+    .WithReference(cache);
 
 builder.AddNpmApp("react", "../korenan.react.client", "dev")
     .WithReference(apiService)

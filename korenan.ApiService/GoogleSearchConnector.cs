@@ -1,8 +1,8 @@
-﻿using Google.Apis.CustomSearchAPI.v1;
+using Google.Apis.CustomSearchAPI.v1;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Plugins.Web;
 
-namespace korenan.ApiService;
+namespace Korenan.ApiService;
 
 public class GoogleSearchConnector : IWebSearchEngineConnector
 {

@@ -38,6 +38,8 @@ export const AnswerResultType = [
 export type AnswerResultType = (typeof AnswerResultType)[number];
 
 export interface CurrentScene {
+  id: string;
+  aikotoba: string;
   scene: GameScene;
   round: number;
   players: Player[];
