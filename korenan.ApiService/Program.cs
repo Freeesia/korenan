@@ -11,7 +11,6 @@ using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
 using Microsoft.SemanticKernel.Plugins.Web.Bing;
-using NeoSmart.AsyncLock;
 using GoogleTrends = GoogleTrendsApi.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -198,7 +197,7 @@ api.MapPost("/regist", async (HttpContext context, [FromServices] IBufferDistrib
     return Results.Ok(user);
 });
 
-var roundLock = new AsyncLock();
+var startLock = new KeyedAsyncLock();
 
 // ラウンド開始
 api.MapPost("/start", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromServices] Kernel kernel) =>
@@ -208,10 +207,15 @@ api.MapPost("/start", async (HttpContext context, [FromServices] IBufferDistribu
     {
         return Results.BadRequest("Some players are not ready.");
     }
-    using var l = await roundLock.LockAsync();
-    if (game.Rounds.LastOrDefault() is { LiarGuesses.Count: 0 })
+    if (startLock.IsLocked(game.Id))
     {
-        return Results.BadRequest("直前のラウンドが終わっていません");
+        return Results.BadRequest("The round is already starting.");
+    }
+    using var l = await startLock.LockAsync(game.Id, context.RequestAborted);
+    game = await GetCurrentGame(context, cache) ?? throw new InvalidOperationException("Game not found.");
+    if (game.Rounds.Count > 0)
+    {
+        return Results.BadRequest("The round has already started.");
     }
     await StartNextRound(game, kernel, cache, context.RequestAborted);
 
@@ -224,14 +228,16 @@ api.MapPost("/next", async (HttpContext context, [FromServices] IBufferDistribut
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
-    using var l = await roundLock.LockAsync();
-    if (game.Rounds.LastOrDefault() is { Liars.Length: 0 })
+    if (game.CurrentScene != GameScene.RoundSummary)
     {
         return Results.BadRequest("直前のラウンドが終わっていません");
     }
-    var player = game.Players.First(p => p.Id == user.Id);
-    player.CurrentScene = GameScene.WaitRoundStart;
-    await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
+    game = await cache.Update<Game>($"game/room/{game.Id}", g =>
+    {
+        var player = game.Players.First(p => p.Id == user.Id);
+        player.CurrentScene = GameScene.WaitRoundStart;
+        return g;
+    }, context.RequestAborted);
     await NextScene(cache, game, kernel, context.RequestAborted);
     return Results.Ok();
 });

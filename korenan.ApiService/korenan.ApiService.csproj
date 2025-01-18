@@ -37,7 +37,6 @@
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.31.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.31.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" Version="1.31.0-alpha" />
-    <PackageReference Include="NeoSmart.AsyncLock" Version="3.2.1" />
     <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="9.0.0" />
   </ItemGroup>
 

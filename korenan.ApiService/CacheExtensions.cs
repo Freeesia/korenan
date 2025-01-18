@@ -9,16 +9,19 @@ public static class CacheExtensions
 {
     private static readonly MessagePackSerializerOptions serializeOptions = MessagePackSerializerOptions.Standard.WithResolver(StandardResolver.Instance);
     private static readonly DistributedCacheEntryOptions defaultOptions = new() { SlidingExpiration = TimeSpan.FromHours(1) };
+    private static readonly KeyedAsyncLock locker = new();
 
     public static async ValueTask Set<T>(this IBufferDistributedCache cache, string key, T data, CancellationToken token = default)
     {
         using var buffer = new ArrayPoolBufferWriter<byte>();
         MessagePackSerializer.Serialize(buffer, data, serializeOptions, token);
+        using var _ = await locker.LockAsync(key, token);
         await cache.SetAsync(key, new(buffer.WrittenMemory), defaultOptions, token);
     }
 
     public static async ValueTask<T> Update<T>(this IBufferDistributedCache cache, string key, Func<T, T> update, CancellationToken token = default)
     {
+        using var _ = await locker.LockAsync(key, token);
         var data = await cache.Get<T>(key, token) ?? throw new InvalidOperationException("Cache data not found");
         data = update(data);
         using var buffer = new ArrayPoolBufferWriter<byte>();
@@ -29,6 +32,7 @@ public static class CacheExtensions
 
     public static async ValueTask<T> Update<T>(this IBufferDistributedCache cache, string key, Action<T> update, CancellationToken token = default)
     {
+        using var _ = await locker.LockAsync(key, token);
         var data = await cache.Get<T>(key, token) ?? throw new InvalidOperationException("Cache data not found");
         update(data);
         using var buffer = new ArrayPoolBufferWriter<byte>();
