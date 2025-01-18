@@ -59,6 +59,10 @@ function WaitRoundStart() {
         <p>
           「{scene?.aikotoba}」 <button onClick={shareAikotoba}>共有</button>
         </p>
+        <p>
+          あいことばを共有することで、みんなで同じゲームに参加できますよ！
+          「共有」ボタンを押して、あいことばをSNSなどでシェアしてくださいね。
+        </p>
       </div>
       <div>
         <h2>参加プレイヤー:</h2>
@@ -73,12 +77,14 @@ function WaitRoundStart() {
           ))}
         </ul>
       </div>
-      <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してください。</p>
-      <button onClick={startRound}>ラウンド開始</button>
-      <button onClick={openConfigDialog}>設定を開く</button>
+      <p>
+        全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！
+      </p>
+      <p>得点設定は「設定」ボタンから変更できます。</p>
+      <button onClick={startRound}>ラウンド開始❗</button>
+      <button onClick={openConfigDialog}>設定</button>
       <dialog ref={configDialogRef}>
         <Config onClose={closeConfigDialog} />
-        <button onClick={closeConfigDialog}>閉じる</button>
       </dialog>
     </div>
   );

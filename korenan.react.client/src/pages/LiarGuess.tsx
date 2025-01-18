@@ -99,6 +99,7 @@ function LiarGuess() {
         </ul>
       </div>
       <div>
+        <p>お題を考えた「ライアープレイヤー」は誰かな？</p>
         <select
           value={guess}
           onChange={(e) => setGuess(e.target.value)}

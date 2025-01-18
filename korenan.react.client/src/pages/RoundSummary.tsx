@@ -47,7 +47,7 @@ function RoundSummary() {
           <li key={player}>{getPlayerName(player)}</li>
         ))}
       </ul>
-      <button onClick={nextScene}>次のシーンへ</button>
+      <button onClick={nextScene}>OK</button>
       <ul>
         {scene?.players.map((player) => (
           <li key={player.id}>

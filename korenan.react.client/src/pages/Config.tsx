@@ -96,6 +96,7 @@ function ConfigPage({ onClose }: { onClose: () => void }) {
         </label>
       </div>
       <button onClick={updateConfig}>Update Config</button>
+      <button onClick={onClose}>閉じる</button>
     </div>
   );
 }

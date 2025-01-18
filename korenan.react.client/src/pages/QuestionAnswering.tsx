@@ -95,6 +95,13 @@ function QuestionAnswering() {
   return (
     <div>
       <h1>質問タイム</h1>
+      <p>
+        AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
+        <br />
+        他のプレイヤーが投げた質問も確認できるよ。
+        <br />
+        お題が分かったら、「解答」ボタンで答えてみてね！
+      </p>
       <div>
         <ul>
           {sceneInfo()?.histories.map((history, index) => (
