@@ -3,7 +3,7 @@ import { SceneContext } from "../App";
 import Config from "./Config";
 
 function WaitRoundStart() {
-  const scene = useContext(SceneContext);
+  const [scene] = useContext(SceneContext);
   const configDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ function WaitRoundStart() {
     const url = `${window.location.origin}/regist?aikotoba=${scene?.aikotoba}`;
     if (navigator.share) {
       navigator.share({
-        title: 'これなんに招待',
+        title: "これなんに招待",
         text: `一緒に遊ぼう！合言葉: ${scene?.aikotoba}\nこちらのURLから参加してね:`,
         url,
       });
@@ -47,7 +47,9 @@ function WaitRoundStart() {
       <h1>プレイヤー待機中</h1>
       <div>
         <h2>あいことば:</h2>
-        <p>「{scene?.aikotoba}」 <button onClick={shareAikotoba}>共有</button></p>
+        <p>
+          「{scene?.aikotoba}」 <button onClick={shareAikotoba}>共有</button>
+        </p>
       </div>
       <div>
         <h2>参加プレイヤー:</h2>

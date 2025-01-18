@@ -3,7 +3,7 @@ import { SceneContext, UserContext } from "../App";
 import { LiarGuessSceneInfo } from "../models";
 
 function LiarGuess() {
-  const scene = useContext(SceneContext);
+  const [scene] = useContext(SceneContext);
   const [user] = useContext(UserContext);
   const [guess, setGuess] = useState("");
   const [guessed, setGuessed] = useState(false);

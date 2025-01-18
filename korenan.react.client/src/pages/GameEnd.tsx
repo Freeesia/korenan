@@ -3,7 +3,7 @@ import { SceneContext } from "../App";
 import { GameEndInfo } from "../models";
 
 function GameEnd() {
-  const scene = useContext(SceneContext);
+  const [scene] = useContext(SceneContext);
 
   useEffect(() => {
     fetch("/api/scene", {

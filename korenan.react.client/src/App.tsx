@@ -5,7 +5,7 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useRef } from "react";
 import "./App.css";
 import Home from "./pages/Home";
 import Debug from "./pages/Debug";
@@ -17,7 +17,9 @@ import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
 import { CurrentScene, User } from "./models";
 
-export const SceneContext = createContext<CurrentScene | undefined>(undefined);
+export const SceneContext = createContext<
+  [CurrentScene | undefined, () => Promise<void>]
+>([undefined, async () => {}]);
 export const UserContext = createContext<[User | undefined, (u: User) => void]>(
   [undefined, () => {}]
 );
@@ -28,11 +30,16 @@ function App() {
   const [lastFetchTime, setLastFetchTime] = useState<Date>();
   const navigate = useNavigate();
   const location = useLocation();
+  const intervalId = useRef<NodeJS.Timeout>(undefined);
 
   const fetchScene = async () => {
     const response = await fetch("/api/scene");
-    if (!response.ok) {
+    if (response.status === 404) {
+      stopFetchingScene();
       setScene(undefined);
+      return;
+    }
+    if (!response.ok) {
       return;
     }
     const data = await response.json();
@@ -60,10 +67,23 @@ function App() {
     setScene(undefined);
   };
 
+  const startFetchingScene = async () => {
+    await fetchScene();
+    if (!intervalId.current) {
+      intervalId.current = setInterval(fetchScene, 1000);
+    }
+  };
+
+  const stopFetchingScene = () => {
+    const id = intervalId.current;
+    intervalId.current = undefined;
+    clearInterval(id);
+  };
+
   useEffect(() => {
     fetchUser();
-    const interval = setInterval(fetchScene, 1000);
-    return () => clearInterval(interval);
+    startFetchingScene();
+    return stopFetchingScene;
   }, []);
 
   useEffect(() => {
@@ -82,7 +102,7 @@ function App() {
   }, [scene, location]);
 
   return (
-    <SceneContext value={scene}>
+    <SceneContext value={[scene, startFetchingScene]}>
       <UserContext value={[user, setUser]}>
         <div className="app-container">
           <nav>

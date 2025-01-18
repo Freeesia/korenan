@@ -1,9 +1,10 @@
 import { useContext, useState, useEffect } from "react";
-import { UserContext } from "../App";
+import { SceneContext, UserContext } from "../App";
 import { Player } from "../models";
 import { useNavigate, useLocation } from "react-router-dom";
 
 function RegistTopic() {
+  const [_, startFetchingScene] = useContext(SceneContext);
   const [user, setUser] = useContext(UserContext);
   const [name, setName] = useState(user?.name || "");
   const [topic, setTopic] = useState("");
@@ -29,6 +30,7 @@ function RegistTopic() {
     });
     const data: Player = await response.json();
     setUser(data);
+    await startFetchingScene();
     navigate("/WaitRoundStart");
   };
 
