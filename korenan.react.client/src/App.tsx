@@ -94,9 +94,6 @@ function App() {
               <li>
                 <NavLink to="/debug">Debug</NavLink>
               </li>
-              <li>
-                <NavLink to="/config">Config</NavLink>
-              </li>
               {scene && (
                 <li style={{ marginLeft: "auto" }}>
                   <button onClick={leaveGame}>ゲームを抜ける</button>
