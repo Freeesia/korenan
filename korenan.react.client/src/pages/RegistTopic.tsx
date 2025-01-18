@@ -41,7 +41,9 @@ function RegistTopic() {
       <div>
         <input
           type="text"
+          id="name"
           placeholder="プレイヤー名"
+          autoComplete="username"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -52,7 +54,9 @@ function RegistTopic() {
       <div>
         <input
           type="text"
+          id="aikotoba"
           placeholder="あいことば"
+          autoComplete="on"
           value={aikotoba}
           onChange={(e) => setAikotoba(e.target.value)}
         />
