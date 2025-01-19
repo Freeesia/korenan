@@ -38,6 +38,9 @@ function QuestionAnswering() {
   };
 
   const askQuestion = async () => {
+    if (question === "" || isWaiting) {
+      return;
+    }
     setIsWaiting(true);
     const res = await fetch("/api/question", {
       method: "POST",
@@ -53,6 +56,9 @@ function QuestionAnswering() {
   };
 
   const submitAnswer = async () => {
+    if (answer === "" || isWaiting) {
+      return;
+    }
     setIsWaiting(true);
     const res = await fetch("/api/answer", {
       method: "POST",
@@ -127,12 +133,15 @@ function QuestionAnswering() {
           type="text"
           placeholder="質問"
           value={question}
+          onKeyDown={(e) =>
+            e.key === "Enter" && !e.nativeEvent.isComposing && askQuestion()
+          }
           onChange={(e) => setQuestion(e.target.value)}
           disabled={isWaiting || remainingQuestions <= 0}
         />
         <button
           onClick={askQuestion}
-          disabled={isWaiting || remainingQuestions <= 0}
+          disabled={isWaiting || remainingQuestions <= 0 || question === ""}
         >
           質問
         </button>
@@ -144,12 +153,15 @@ function QuestionAnswering() {
           type="text"
           placeholder="解答"
           value={answer}
+          onKeyDown={(e) =>
+            e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()
+          }
           onChange={(e) => setAnswer(e.target.value)}
           disabled={isWaiting || remainingAnswers <= 0}
         />
         <button
           onClick={submitAnswer}
-          disabled={isWaiting || remainingAnswers <= 0}
+          disabled={isWaiting || remainingAnswers <= 0 || answer === ""}
         >
           解答
         </button>
