@@ -580,7 +580,7 @@ api.MapPost("/config", async (HttpContext context, [FromServices] IBufferDistrib
     {
         return Results.BadRequest("Game not found.");
     }
-    await cache.Set($"game/room/{game.Id}", game with { Config = newConfig }, context.RequestAborted);
+    await cache.Update<Game>($"game/room/{game.Id}", g => g with { Config = newConfig }, context.RequestAborted);
     return Results.Ok();
 });
 
