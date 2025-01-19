@@ -31,6 +31,11 @@ public enum GameScene
     WaitRoundStart,
 
     /// <summary>
+    /// お題を抽選するフェーズ
+    /// </summary>
+    TopicSelecting,
+
+    /// <summary>
     /// プレイヤーが質問したり、解答したりするフェーズ
     /// </summary>
     QuestionAnswering,

@@ -4,14 +4,15 @@ import { AnswerResult, Player, QuestionResult } from "../models";
 import { SceneContext, UserContext } from "../App";
 
 function Debug() {
-  const [scene] = useContext(SceneContext);
+  const [scene, startFetchingScene] = useContext(SceneContext);
   const [user, setUser] = useContext(UserContext);
   const [registResponse, setRegistResponse] = useState<Player>();
   const [questionResponse, setQuestionResponse] = useState<QuestionResult>();
   const [answerResponse, setAnswerResponse] = useState<AnswerResult>();
 
-  const [playerName, setPlayerName] = useState(user?.name || "");
-  const [playerTopic, setPlayerTopic] = useState("");
+  const [name, setName] = useState(user?.name || "");
+  const [aikotoba, setAikotoba] = useState("");
+  const [topic, setTopic] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [guess, setGuess] = useState("");
@@ -22,11 +23,12 @@ function Debug() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name: playerName, topic: playerTopic }),
+      body: JSON.stringify({ name, aikotoba, topic }),
     });
     const data: Player = await response.json();
     setRegistResponse(data);
     setUser(data);
+    await startFetchingScene();
   };
 
   const startRound = async () => {
@@ -75,6 +77,8 @@ function Debug() {
     await fetch("/api/reset", { method: "POST" });
   };
 
+  const isFormValid = name && topic && aikotoba;
+
   return (
     <div className="container">
       <h1 className="title">Debug Page</h1>
@@ -82,22 +86,30 @@ function Debug() {
         <div className="api-section disabled">
           <input
             type="text"
-            placeholder="Player Name"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            disabled={scene?.scene !== "WaitRoundStart"}
+            id="username"
+            placeholder="プレイヤー名"
+            autoComplete="on"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={scene !== undefined}
+          />
+          <input
+            type="text"
+            id="aikotoba"
+            placeholder="あいことば"
+            autoComplete="on"
+            value={aikotoba}
+            onChange={(e) => setAikotoba(e.target.value)}
+            disabled={scene !== undefined}
           />
           <input
             type="text"
             placeholder="Player Topic"
-            value={playerTopic}
-            onChange={(e) => setPlayerTopic(e.target.value)}
-            disabled={scene?.scene !== "WaitRoundStart"}
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            disabled={scene !== undefined}
           />
-          <button
-            onClick={registPlayer}
-            disabled={scene?.scene !== "WaitRoundStart"}
-          >
+          <button onClick={registPlayer} disabled={!isFormValid}>
             Register Player
           </button>
         </div>
@@ -157,10 +169,7 @@ function Debug() {
             onChange={(e) => setGuess(e.target.value)}
             disabled={scene?.scene !== "LiarGuess"}
           />
-          <button
-            onClick={guessLiar}
-            disabled={scene?.scene !== "LiarGuess"}
-          >
+          <button onClick={guessLiar} disabled={scene?.scene !== "LiarGuess"}>
             Guess Liar
           </button>
         </div>

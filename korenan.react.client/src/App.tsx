@@ -11,6 +11,7 @@ import Home from "./pages/Home";
 import Debug from "./pages/Debug";
 import RegistTopic from "./pages/RegistTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
+import TopicSelecting from "./pages/TopicSelecting";
 import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarGuess from "./pages/LiarGuess";
 import RoundSummary from "./pages/RoundSummary";
@@ -124,6 +125,7 @@ function App() {
             <Route path="/debug" element={<Debug />} />
             <Route path="/regist" element={<RegistTopic />} />
             <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
+            <Route path="/TopicSelecting" element={<TopicSelecting />} />
             <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
             <Route path="/LiarGuess" element={<LiarGuess />} />
             <Route path="/RoundSummary" element={<RoundSummary />} />

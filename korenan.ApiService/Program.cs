@@ -96,6 +96,7 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
     switch (game.CurrentScene)
     {
         case GameScene.WaitRoundStart:
+        case GameScene.TopicSelecting:
             break;
         case GameScene.QuestionAnswering:
             {
@@ -167,6 +168,10 @@ api.MapPost("/regist", async (HttpContext context, [FromServices] IBufferDistrib
     {
         user = new User(Guid.NewGuid(), req.Name);
         context.Session.Set(nameof(User), user);
+    }
+    if (string.IsNullOrEmpty(req.Aikotoba))
+    {
+        return Results.BadRequest("Aikotoba is required.");
     }
     var room = await cache.GetStringAsync($"game/aikotoba/{req.Aikotoba}", context.RequestAborted);
     Game game;
@@ -244,20 +249,16 @@ api.MapPost("/next", async (HttpContext context, [FromServices] IBufferDistribut
 
 static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCache cache, CancellationToken token = default)
 {
+    game = await cache.Update<Game>($"game/room/{game.Id}", g => g with { CurrentScene = GameScene.TopicSelecting }, token);
     var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
     var topic = topics[Random.Shared.Next(topics.Length)];
     var topicInfo = string.Join(Environment.NewLine, [
         await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = topic }, token),
         await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = topic }, token),
         ]);
-    var round = new Round(
-        topic,
-        topicInfo,
-        game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray(),
-        [],
-        []);
-    game.Rounds.Add(round);
-    await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.QuestionAnswering }, token);
+    var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray();
+    var round = new Round(topic, topicInfo, liars, [], []);
+    await cache.Update<Game>($"game/room/{game.Id}", g => g with { CurrentScene = GameScene.QuestionAnswering, Rounds = [.. g.Rounds, round] }, token);
 }
 
 // 質問と回答
@@ -503,6 +504,8 @@ api.MapGet("/scene", async (HttpContext context, [FromServices] IBufferDistribut
                 GameScene.WaitRoundStart
                     => new WaitRoundSceneInfo(
                         game.Players.Where(p => p.CurrentScene == game.CurrentScene).Count()),
+                GameScene.TopicSelecting
+                    => new TopicSelectingSceneInfo(),
                 GameScene.QuestionAnswering
                     => new QuestionAnsweringSceneInfo(
                         game.Rounds.Last().Histories.Select(h => h.Result).ToArray()),
@@ -566,6 +569,11 @@ api.MapPost("/reset", async (HttpContext context, [FromServices] IBufferDistribu
         await cache.RemoveAsync($"user/{player.Id}/room", context.RequestAborted);
     }
     await cache.RemoveAsync($"game/room/{game.Id}", context.RequestAborted);
+    var room = await cache.GetStringAsync($"game/aikotoba/{game.Aikotoba}", context.RequestAborted);
+    if (room == game.Id)
+    {
+        await cache.RemoveAsync($"game/aikotoba/{game.Aikotoba}", context.RequestAborted);
+    }
     return Results.Ok();
 });
 
@@ -609,6 +617,7 @@ record AnswerResponse(string Reason, AnswerResultType Result);
 record CurrentScene(string Id, string Aikotoba, GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
 
 [JsonDerivedType(typeof(WaitRoundSceneInfo))]
+[JsonDerivedType(typeof(TopicSelectingSceneInfo))]
 [JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
 [JsonDerivedType(typeof(LiarGuessSceneInfo))]
 [JsonDerivedType(typeof(RoundSummaryInfo))]
@@ -616,6 +625,7 @@ record CurrentScene(string Id, string Aikotoba, GameScene Scene, int Round, Play
 interface ISceneInfo;
 
 record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
+record TopicSelectingSceneInfo() : ISceneInfo;
 record QuestionAnsweringSceneInfo(IPlayerResult[] Histories) : ISceneInfo;
 record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, LiarGuess[] Targets) : ISceneInfo;
 record RoundSummaryInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
