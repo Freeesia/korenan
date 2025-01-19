@@ -37,8 +37,9 @@ function QuestionAnswering() {
     setConfig(data);
   };
 
-  const askQuestion = async () => {
-    if (question === "" || isWaiting) {
+  const askQuestion = async (q?: string) => {
+    const final = q ?? question;
+    if (final === "" || isWaiting) {
       return;
     }
     setIsWaiting(true);
@@ -47,7 +48,7 @@ function QuestionAnswering() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(question),
+      body: JSON.stringify(final),
     });
     const data: QuestionResultType = await res.json();
     setQResult(data);
@@ -55,8 +56,9 @@ function QuestionAnswering() {
     setIsWaiting(false);
   };
 
-  const submitAnswer = async () => {
-    if (answer === "" || isWaiting) {
+  const submitAnswer = async (a?: string) => {
+    const final = a ?? answer;
+    if (final === "" || isWaiting) {
       return;
     }
     setIsWaiting(true);
@@ -65,12 +67,42 @@ function QuestionAnswering() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(answer),
+      body: JSON.stringify(final),
     });
     const data: AnswerResultType = await res.json();
     setAResult(data);
     setAnswer("");
     setIsWaiting(false);
+  };
+
+  const qRecog = new (window.SpeechRecognition ||
+    window.webkitSpeechRecognition)();
+  qRecog.lang = "ja-JP";
+  qRecog.interimResults = true;
+  qRecog.continuous = false;
+  qRecog.onresult = (ev) => {
+    const result = ev.results[0];
+    const speechResult = result[0].transcript;
+    setQuestion(speechResult);
+    if (result.isFinal) {
+      qRecog.stop();
+      askQuestion(speechResult);
+    }
+  };
+
+  const aRecog = new (window.SpeechRecognition ||
+    window.webkitSpeechRecognition)();
+  aRecog.lang = "ja-JP";
+  aRecog.interimResults = true;
+  aRecog.continuous = false;
+  aRecog.onresult = (ev) => {
+    const result = ev.results[0];
+    const speechResult = result[0].transcript;
+    setAnswer(speechResult);
+    if (result.isFinal) {
+      aRecog.stop();
+      submitAnswer(speechResult);
+    }
   };
 
   const sceneInfo = () => {
@@ -140,10 +172,16 @@ function QuestionAnswering() {
           disabled={isWaiting || remainingQuestions <= 0}
         />
         <button
-          onClick={askQuestion}
+          onClick={() => askQuestion()}
           disabled={isWaiting || remainingQuestions <= 0 || question === ""}
         >
           質問
+        </button>
+        <button
+          onClick={() => qRecog.start()}
+          disabled={isWaiting || remainingQuestions <= 0}
+        >
+          🎙️
         </button>
         <pre>{qResult}</pre>
         <p>残りの質問回数: {remainingQuestions}</p>
@@ -160,10 +198,16 @@ function QuestionAnswering() {
           disabled={isWaiting || remainingAnswers <= 0}
         />
         <button
-          onClick={submitAnswer}
+          onClick={() => submitAnswer()}
           disabled={isWaiting || remainingAnswers <= 0 || answer === ""}
         >
           解答
+        </button>
+        <button
+          onClick={() => aRecog.start()}
+          disabled={isWaiting || remainingAnswers <= 0}
+        >
+          🎙️
         </button>
         <pre>{aResult}</pre>
         <p>残りの解答回数: {remainingAnswers}</p>
