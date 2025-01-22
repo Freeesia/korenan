@@ -24,10 +24,12 @@ function Home() {
 
   return (
     <div>
-      <h1>これなーんだ❓(ライアー)</h1>
-      <button onClick={regist}>参加！</button>
-      <h2>遊び方</h2>
-      <ol>
+      <h1 className="text-6xl">これなーんだ❓(ライアー)</h1>
+      <button className="m-4" onClick={regist}>
+        参加！
+      </button>
+      <h2 className="text-4xl p-4">遊び方</h2>
+      <ol className="bg-slate-800 p-4 rounded-2xl">
         <li>まずは各プレイヤーが自分の名前とお題を登録します。</li>
         <li>全員が登録を完了したら、ゲームがスタートします。</li>
         <li>
