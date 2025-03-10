@@ -85,7 +85,7 @@ function App() {
     fetchUser();
     startFetchingScene();
     return stopFetchingScene;
-  }, []);
+  }, [startFetchingScene]);
 
   useEffect(() => {
     const currentPath = location.pathname.substring(1);
@@ -102,7 +102,7 @@ function App() {
     document.startViewTransition(() => {
       navigate(`/${page}`, { replace: true });
     });
-  }, [scene, location]);
+  }, [scene, location, navigate]);
 
   return (
     <SceneContext value={[scene, startFetchingScene]}>
