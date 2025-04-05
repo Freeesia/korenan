@@ -81,6 +81,12 @@ function App() {
     setMenuOpen(!menuOpen);
   };
 
+  const navigateToHome = () => {
+    document.startViewTransition(() => {
+      navigate("/");
+    });
+  };
+
   useEffect(() => {
     fetchUser();
     startFetchingScene();
@@ -111,7 +117,9 @@ function App() {
           <div className="app-container">
             <nav className="mobile-nav">
               <div className="nav-content">
-                <div className="app-title">{pageTitle}</div>
+                <button onClick={navigateToHome} className="app-title-button">
+                  {pageTitle}
+                </button>
                 <div className="hamburger-icon" onClick={toggleMenu}>
                   <span></span>
                   <span></span>
