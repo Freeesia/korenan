@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { SceneContext, UserContext } from "../App";
 import {
   QuestionAnsweringSceneInfo,
@@ -9,6 +9,8 @@ import {
   QuestionResult,
   Config,
 } from "../models";
+import useSound from "use-sound";
+import notificationSound from "../assets/決定ボタンを押す52.mp3";
 
 function QuestionAnswering() {
   const [scene] = useContext(SceneContext);
@@ -19,6 +21,33 @@ function QuestionAnswering() {
   const [aResult, setAResult] = useState<AnswerResultType>();
   const [isWaiting, setIsWaiting] = useState(false);
   const [config, setConfig] = useState<Config>();
+  const prevHistoriesLengthRef = useRef<number>(0);
+  const [playNotifySound] = useSound(notificationSound);
+
+  const sceneInfo = useCallback(() => {
+    if (scene?.scene === "QuestionAnswering") {
+      return scene?.info as QuestionAnsweringSceneInfo;
+    }
+    return undefined;
+  }, [scene]);
+
+  // 履歴が変わったら振動させて音を鳴らす
+  useEffect(() => {
+    const histories = sceneInfo()?.histories || [];
+    if (
+      prevHistoriesLengthRef.current > 0 &&
+      histories.length > prevHistoriesLengthRef.current
+    ) {
+      // スマホを振動させる（振動パターン: 100ms振動）
+      if ("vibrate" in navigator) {
+        navigator.vibrate(100);
+      }
+
+      // 効果音を再生
+      playNotifySound();
+    }
+    prevHistoriesLengthRef.current = histories.length;
+  }, [scene, sceneInfo, playNotifySound]);
 
   useEffect(() => {
     fetch("/api/scene", {
@@ -75,8 +104,7 @@ function QuestionAnswering() {
     setIsWaiting(false);
   };
 
-  const qRecog = new (window.SpeechRecognition ||
-    window.webkitSpeechRecognition)();
+  const qRecog = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   qRecog.lang = "ja-JP";
   qRecog.interimResults = true;
   qRecog.continuous = false;
@@ -90,8 +118,7 @@ function QuestionAnswering() {
     }
   };
 
-  const aRecog = new (window.SpeechRecognition ||
-    window.webkitSpeechRecognition)();
+  const aRecog = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   aRecog.lang = "ja-JP";
   aRecog.interimResults = true;
   aRecog.continuous = false;
@@ -105,30 +132,11 @@ function QuestionAnswering() {
     }
   };
 
-  const sceneInfo = () => {
-    if (scene?.scene === "QuestionAnswering") {
-      return scene?.info as QuestionAnsweringSceneInfo;
-    }
-    return undefined;
-  };
-
-  const getPlayerName = (id: string) =>
-    scene?.players.find((p) => p.id === id)?.name || id;
-
+  const getPlayerName = (id: string) => scene?.players.find((p) => p.id === id)?.name || id;
   const getAnswerResult = (result: IPlayerResult) => result as AnswerResult;
   const getQuestionResult = (result: IPlayerResult) => result as QuestionResult;
-
-  const remainingQuestions =
-    (config?.questionLimit ?? 0) -
-    (sceneInfo()?.histories.filter(
-      (h) => h.type === "Question" && h.player === user?.id
-    ).length ?? 0);
-
-  const remainingAnswers =
-    (config?.answerLimit ?? 0) -
-    (sceneInfo()?.histories.filter(
-      (h) => h.type === "Answer" && h.player === user?.id
-    ).length ?? 0);
+  const remainingQuestions = (config?.questionLimit ?? 0) - (sceneInfo()?.histories.filter((h) => h.type === "Question" && h.player === user?.id).length ?? 0);
+  const remainingAnswers = (config?.answerLimit ?? 0) - (sceneInfo()?.histories.filter((h) => h.type === "Answer" && h.player === user?.id).length ?? 0);
 
   return (
     <div>
@@ -147,13 +155,11 @@ function QuestionAnswering() {
               {getPlayerName(history.player)}:{" "}
               {history.type === "Question" ? (
                 <span>
-                  {getQuestionResult(history).question} -{" "}
-                  {getQuestionResult(history).result}
+                  {getQuestionResult(history).question} - {getQuestionResult(history).result}
                 </span>
               ) : (
                 <span>
-                  {getAnswerResult(history).answer} -{" "}
-                  {getAnswerResult(history).result}
+                  {getAnswerResult(history).answer} - {getAnswerResult(history).result}
                 </span>
               )}
             </li>
@@ -165,48 +171,25 @@ function QuestionAnswering() {
           type="text"
           placeholder="質問"
           value={question}
-          onKeyDown={(e) =>
-            e.key === "Enter" && !e.nativeEvent.isComposing && askQuestion()
-          }
+          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && askQuestion()}
           onChange={(e) => setQuestion(e.target.value)}
           disabled={isWaiting || remainingQuestions <= 0}
         />
-        <button
-          onClick={() => askQuestion()}
-          disabled={isWaiting || remainingQuestions <= 0 || question === ""}
-        >
+        <button onClick={() => askQuestion()} disabled={isWaiting || remainingQuestions <= 0 || question === ""}>
           質問
         </button>
-        <button
-          onClick={() => qRecog.start()}
-          disabled={isWaiting || remainingQuestions <= 0}
-        >
+        <button onClick={() => qRecog.start()} disabled={isWaiting || remainingQuestions <= 0}>
           🎙️
         </button>
         <pre>{qResult}</pre>
         <p>残りの質問回数: {remainingQuestions}</p>
       </div>
       <div>
-        <input
-          type="text"
-          placeholder="解答"
-          value={answer}
-          onKeyDown={(e) =>
-            e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()
-          }
-          onChange={(e) => setAnswer(e.target.value)}
-          disabled={isWaiting || remainingAnswers <= 0}
-        />
-        <button
-          onClick={() => submitAnswer()}
-          disabled={isWaiting || remainingAnswers <= 0 || answer === ""}
-        >
+        <input type="text" placeholder="解答" value={answer} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()} onChange={(e) => setAnswer(e.target.value)} disabled={isWaiting || remainingAnswers <= 0} />
+        <button onClick={() => submitAnswer()} disabled={isWaiting || remainingAnswers <= 0 || answer === ""}>
           解答
         </button>
-        <button
-          onClick={() => aRecog.start()}
-          disabled={isWaiting || remainingAnswers <= 0}
-        >
+        <button onClick={() => aRecog.start()} disabled={isWaiting || remainingAnswers <= 0}>
           🎙️
         </button>
         <pre>{aResult}</pre>

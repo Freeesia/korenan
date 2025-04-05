@@ -13,10 +13,11 @@ dotnet_diagnostic.SKEXP0001.severity = none
 dotnet_diagnostic.SKEXP0050.severity = none
 dotnet_diagnostic.SKEXP0070.severity = none
 
-[*.{ts,js, html, css, scss, json}]
+[*.{ts,tsx,js, html, css, scss, json}]
 end_of_line = lf
 indent_size = 2
 trim_trailing_whitespace = true
+max_line_length = 240
 
 [*.md]
 indent_size = 2
