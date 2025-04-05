@@ -5,7 +5,7 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { createContext, useState, useEffect, useRef } from "react";
+import { createContext, useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import Home from "./pages/Home";
 import Debug from "./pages/Debug";
@@ -33,7 +33,13 @@ function App() {
   const location = useLocation();
   const intervalId = useRef<NodeJS.Timeout>(undefined);
 
-  const fetchScene = async () => {
+  const stopFetchingScene = useCallback(() => {
+    const id = intervalId.current;
+    intervalId.current = undefined;
+    clearInterval(id);
+  }, []);
+
+  const fetchScene = useCallback(async () => {
     const response = await fetch("/api/scene");
     if (response.status === 404) {
       stopFetchingScene();
@@ -46,7 +52,7 @@ function App() {
     const data = await response.json();
     setScene(data);
     setLastFetchTime(new Date());
-  };
+  }, [stopFetchingScene]);
 
   const fetchUser = async () => {
     const response = await fetch("/api/me");
@@ -68,24 +74,18 @@ function App() {
     setScene(undefined);
   };
 
-  const startFetchingScene = async () => {
+  const startFetchingScene = useCallback(async () => {
     await fetchScene();
     if (!intervalId.current) {
       intervalId.current = setInterval(fetchScene, 1000);
     }
-  };
-
-  const stopFetchingScene = () => {
-    const id = intervalId.current;
-    intervalId.current = undefined;
-    clearInterval(id);
-  };
+  }, [fetchScene]);
 
   useEffect(() => {
     fetchUser();
     startFetchingScene();
     return stopFetchingScene;
-  }, [startFetchingScene]);
+  }, [startFetchingScene, stopFetchingScene]);
 
   useEffect(() => {
     const currentPath = location.pathname.substring(1);
