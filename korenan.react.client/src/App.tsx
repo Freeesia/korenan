@@ -29,6 +29,7 @@ function App() {
   const [scene, setScene] = useState<CurrentScene>();
   const [user, setUser] = useState<User>();
   const [lastFetchTime, setLastFetchTime] = useState<Date>();
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const intervalId = useRef<NodeJS.Timeout>(undefined);
@@ -72,6 +73,7 @@ function App() {
       body: JSON.stringify(user.id),
     });
     setScene(undefined);
+    setMenuOpen(false);
   };
 
   const startFetchingScene = useCallback(async () => {
@@ -80,6 +82,10 @@ function App() {
       intervalId.current = setInterval(fetchScene, 1000);
     }
   }, [fetchScene]);
+
+  const toggleMenu = () => {
+    setMenuOpen(!menuOpen);
+  };
 
   useEffect(() => {
     fetchUser();
@@ -105,20 +111,30 @@ function App() {
   }, [scene, location, navigate]);
 
   return (
-    <SceneContext value={[scene, startFetchingScene]}>
-      <UserContext value={[user, setUser]}>
+    <SceneContext.Provider value={[scene, startFetchingScene]}>
+      <UserContext.Provider value={[user, setUser]}>
         <div className="app-container">
-          <nav>
-            <ul>
-              <li>
-                <NavLink to="/debug">Debug</NavLink>
-              </li>
-              {scene && (
-                <li style={{ marginLeft: "auto" }}>
-                  <button onClick={leaveGame}>ゲームを抜ける</button>
+          <nav className="mobile-nav">
+            <div className="nav-content">
+              <div className="app-title">コレナン</div>
+              <div className="hamburger-icon" onClick={toggleMenu}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
+              <ul>
+                <li>
+                  <NavLink to="/debug" onClick={() => setMenuOpen(false)}>デバッグ</NavLink>
                 </li>
-              )}
-            </ul>
+                {scene && (
+                  <li>
+                    <button onClick={leaveGame}>ゲームを抜ける</button>
+                  </li>
+                )}
+              </ul>
+            </div>
           </nav>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -138,8 +154,8 @@ function App() {
             </div>
           </footer>
         </div>
-      </UserContext>
-    </SceneContext>
+      </UserContext.Provider>
+    </SceneContext.Provider>
   );
 }
 

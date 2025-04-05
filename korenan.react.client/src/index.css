@@ -28,7 +28,7 @@ body {
   flex-direction: column;
   min-width: 320px;
   min-height: 100vh;
-  padding-top: 3em; /* Adjust this value to match the height of the nav */
+  padding-top: 60px; /* モバイルナビの高さに合わせて調整 */
 }
 
 h1 {
@@ -62,27 +62,7 @@ button:focus-visible {
   justify-content: space-between;
 }
 
-nav {
-  background-color: #333;
-  padding: 1em;
-  position: fixed;
-  width: 100%;
-  top: 0;
-  left: 0;
-  z-index: 1000;
-}
-
-nav ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 1em;
-}
-
-nav ul li {
-  display: inline;
-}
-
+/* モバイル向けに調整（古いnavスタイルを削除） */
 footer {
   background-color: #333;
   padding: 1em;
@@ -91,6 +71,19 @@ footer {
   width: 100%;
   left: 0;
   bottom: 0;
+}
+
+/* タッチデバイス向け最適化 */
+@media (hover: none) {
+  a:hover,
+  button:hover {
+    border-color: transparent;
+  }
+  
+  .mobile-menu a:active, 
+  .mobile-menu button:active {
+    background-color: #555;
+  }
 }
 
 @media (prefers-color-scheme: light) {
