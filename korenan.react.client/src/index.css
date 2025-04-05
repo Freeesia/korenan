@@ -13,6 +13,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* モバイルでのテキスト入力時の自動ズーム防止 */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea {
+  font-size: 16px; /* 16px以上にすることでiOSの自動ズームを防止 */
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
