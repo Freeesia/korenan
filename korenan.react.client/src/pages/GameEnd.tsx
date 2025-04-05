@@ -1,9 +1,10 @@
 import { useContext, useEffect } from "react";
-import { SceneContext } from "../App";
+import { SceneContext, TitleContext } from "../App";
 import { GameEndInfo } from "../models";
 
 function GameEnd() {
   const [scene] = useContext(SceneContext);
+  const [, setPageTitle] = useContext(TitleContext);
 
   useEffect(() => {
     fetch("/api/scene", {
@@ -13,7 +14,9 @@ function GameEnd() {
       },
       body: JSON.stringify("GameEnd"),
     });
-  }, []);
+
+    setPageTitle("最終結果");
+  }, [setPageTitle]);
 
   const sceneInfo = () => {
     if (scene?.scene === "GameEnd") {

@@ -1,20 +1,13 @@
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { SceneContext, UserContext } from "../App";
-import {
-  QuestionAnsweringSceneInfo,
-  QuestionResultType,
-  AnswerResultType,
-  IPlayerResult,
-  AnswerResult,
-  QuestionResult,
-  Config,
-} from "../models";
+import { SceneContext, UserContext, TitleContext } from "../App";
+import { QuestionAnsweringSceneInfo, QuestionResultType, AnswerResultType, IPlayerResult, AnswerResult, QuestionResult, Config } from "../models";
 import useSound from "use-sound";
 import notificationSound from "../assets/決定ボタンを押す52.mp3";
 
 function QuestionAnswering() {
   const [scene] = useContext(SceneContext);
   const [user] = useContext(UserContext);
+  const [, setPageTitle] = useContext(TitleContext);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [qResult, setQResult] = useState<QuestionResultType>();
@@ -34,10 +27,7 @@ function QuestionAnswering() {
   // 履歴が変わったら振動させて音を鳴らす
   useEffect(() => {
     const histories = sceneInfo()?.histories || [];
-    if (
-      prevHistoriesLengthRef.current > 0 &&
-      histories.length > prevHistoriesLengthRef.current
-    ) {
+    if (prevHistoriesLengthRef.current > 0 && histories.length > prevHistoriesLengthRef.current) {
       // スマホを振動させる（振動パターン: 100ms振動）
       if ("vibrate" in navigator) {
         navigator.vibrate(100);
@@ -58,7 +48,9 @@ function QuestionAnswering() {
       body: JSON.stringify("QuestionAnswering"),
     });
     fetchConfig();
-  }, []);
+
+    setPageTitle("質問タイム");
+  }, [setPageTitle]);
 
   const fetchConfig = async () => {
     const res = await fetch("/api/config");
@@ -140,7 +132,6 @@ function QuestionAnswering() {
 
   return (
     <div>
-      <h1>質問タイム</h1>
       <p>
         AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
         <br />

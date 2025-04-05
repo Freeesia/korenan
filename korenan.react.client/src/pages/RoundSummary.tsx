@@ -1,9 +1,10 @@
 import { useContext, useEffect } from "react";
-import { SceneContext } from "../App";
+import { SceneContext, TitleContext } from "../App";
 import { RoundSummaryInfo } from "../models";
 
 function RoundSummary() {
   const [scene] = useContext(SceneContext);
+  const [, setPageTitle] = useContext(TitleContext);
 
   useEffect(() => {
     fetch("/api/scene", {
@@ -13,7 +14,9 @@ function RoundSummary() {
       },
       body: JSON.stringify("RoundSummary"),
     });
-  }, []);
+
+    setPageTitle("ラウンド結果");
+  }, [setPageTitle]);
 
   const sceneInfo = () => {
     if (scene?.scene === "RoundSummary") {
@@ -51,8 +54,7 @@ function RoundSummary() {
       <ul>
         {scene?.players.map((player) => (
           <li key={player.id}>
-            {player.name}:{" "}
-            {player.currentScene == "WaitRoundStart" ? "OK" : "結果表示中"}
+            {player.name}: {player.currentScene == "WaitRoundStart" ? "OK" : "結果表示中"}
           </li>
         ))}
       </ul>

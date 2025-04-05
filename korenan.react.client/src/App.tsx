@@ -1,10 +1,4 @@
-import {
-  Routes,
-  Route,
-  NavLink,
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
+import { Routes, Route, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { createContext, useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import Home from "./pages/Home";
@@ -18,18 +12,18 @@ import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
 import { CurrentScene, User } from "./models";
 
-export const SceneContext = createContext<
-  [CurrentScene | undefined, () => Promise<void>]
->([undefined, async () => {}]);
-export const UserContext = createContext<[User | undefined, (u: User) => void]>(
-  [undefined, () => {}]
-);
+const APP_TITLE = "コレナン";
+
+export const SceneContext = createContext<[CurrentScene | undefined, () => Promise<void>]>([undefined, async () => {}]);
+export const UserContext = createContext<[User | undefined, (u: User) => void]>([undefined, () => {}]);
+export const TitleContext = createContext<[string, (title: string) => void]>([APP_TITLE, () => {}]);
 
 function App() {
   const [scene, setScene] = useState<CurrentScene>();
   const [user, setUser] = useState<User>();
   const [lastFetchTime, setLastFetchTime] = useState<Date>();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pageTitle, setPageTitle] = useState(APP_TITLE);
   const navigate = useNavigate();
   const location = useLocation();
   const intervalId = useRef<NodeJS.Timeout>(undefined);
@@ -113,47 +107,50 @@ function App() {
   return (
     <SceneContext.Provider value={[scene, startFetchingScene]}>
       <UserContext.Provider value={[user, setUser]}>
-        <div className="app-container">
-          <nav className="mobile-nav">
-            <div className="nav-content">
-              <div className="app-title">コレナン</div>
-              <div className="hamburger-icon" onClick={toggleMenu}>
-                <span></span>
-                <span></span>
-                <span></span>
+        <TitleContext.Provider value={[pageTitle, setPageTitle]}>
+          <div className="app-container">
+            <nav className="mobile-nav">
+              <div className="nav-content">
+                <div className="app-title">{pageTitle}</div>
+                <div className="hamburger-icon" onClick={toggleMenu}>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </div>
-            </div>
-            <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
-              <ul>
-                <li>
-                  <NavLink to="/debug" onClick={() => setMenuOpen(false)}>デバッグ</NavLink>
-                </li>
-                {scene && (
+              <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
+                <ul>
                   <li>
-                    <button onClick={leaveGame}>ゲームを抜ける</button>
+                    <NavLink to="/debug" onClick={() => setMenuOpen(false)}>
+                      デバッグ
+                    </NavLink>
                   </li>
-                )}
-              </ul>
-            </div>
-          </nav>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/debug" element={<Debug />} />
-            <Route path="/regist" element={<RegistTopic />} />
-            <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
-            <Route path="/TopicSelecting" element={<TopicSelecting />} />
-            <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
-            <Route path="/LiarGuess" element={<LiarGuess />} />
-            <Route path="/RoundSummary" element={<RoundSummary />} />
-            <Route path="/GameEnd" element={<GameEnd />} />
-          </Routes>
-          <footer>
-            <div>
-              最終更新日時: {lastFetchTime?.toLocaleTimeString()} | プレイヤー:{" "}
-              {user?.name}
-            </div>
-          </footer>
-        </div>
+                  {scene && (
+                    <li>
+                      <button onClick={leaveGame}>ゲームを抜ける</button>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </nav>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/debug" element={<Debug />} />
+              <Route path="/regist" element={<RegistTopic />} />
+              <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
+              <Route path="/TopicSelecting" element={<TopicSelecting />} />
+              <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
+              <Route path="/LiarGuess" element={<LiarGuess />} />
+              <Route path="/RoundSummary" element={<RoundSummary />} />
+              <Route path="/GameEnd" element={<GameEnd />} />
+            </Routes>
+            <footer>
+              <div>
+                最終更新日時: {lastFetchTime?.toLocaleTimeString()} | プレイヤー: {user?.name}
+              </div>
+            </footer>
+          </div>
+        </TitleContext.Provider>
       </UserContext.Provider>
     </SceneContext.Provider>
   );

@@ -1,19 +1,20 @@
-import { useContext, useEffect, useState } from "react";
-import { SceneContext, UserContext } from "../App";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { SceneContext, UserContext, TitleContext } from "../App";
 import { LiarGuessSceneInfo } from "../models";
 
 function LiarGuess() {
   const [scene] = useContext(SceneContext);
   const [user] = useContext(UserContext);
+  const [, setPageTitle] = useContext(TitleContext);
   const [guess, setGuess] = useState("");
   const [guessed, setGuessed] = useState(false);
 
-  const sceneInfo = () => {
+  const sceneInfo = useCallback(() => {
     if (scene?.scene === "LiarGuess") {
       return scene?.info as LiarGuessSceneInfo;
     }
     return undefined;
-  };
+  }, [scene]);
 
   useEffect(() => {
     fetch("/api/scene", {
@@ -23,7 +24,9 @@ function LiarGuess() {
       },
       body: JSON.stringify("LiarGuess"),
     });
-  }, []);
+
+    setPageTitle("ライアー推測タイム");
+  }, [setPageTitle]);
 
   const guessLiar = async () => {
     const res = await fetch("/api/guess", {
@@ -48,18 +51,16 @@ function LiarGuess() {
     });
   };
 
-  const getPlayerName = (id: string) =>
-    scene?.players.find((p) => p.id === id)?.name || id;
+  const getPlayerName = (id: string) => scene?.players.find((p) => p.id === id)?.name || id;
 
   useEffect(() => {
     if (sceneInfo()?.targets.findIndex((t) => t.player === user?.id) !== -1) {
       setGuessed(true);
     }
-  }, [scene]);
+  }, [scene, sceneInfo, user?.id]);
 
   return (
     <div>
-      <h1>ライアー推測タイム</h1>
       <div>
         <h2>正解のお題: {sceneInfo()?.topic}</h2>
         <h2>正解者:</h2>
@@ -83,28 +84,17 @@ function LiarGuess() {
         <h2>未回答プレイヤー:</h2>
         <ul>
           {scene?.players
-            .filter(
-              (player) =>
-                !sceneInfo()?.targets.some((t) => t.player === player.id)
-            )
+            .filter((player) => !sceneInfo()?.targets.some((t) => t.player === player.id))
             .map((player) => (
               <li key={player.id}>
-                {player.name}{" "}
-                {scene?.players[0].id === user?.id &&
-                  player.id !== user?.id && (
-                    <button onClick={() => banPlayer(player.id)}>BAN</button>
-                  )}
+                {player.name} {scene?.players[0].id === user?.id && player.id !== user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
               </li>
             ))}
         </ul>
       </div>
       <div>
         <p>お題を考えた「ライアープレイヤー」は誰かな？</p>
-        <select
-          value={guess}
-          onChange={(e) => setGuess(e.target.value)}
-          disabled={guessed}
-        >
+        <select value={guess} onChange={(e) => setGuess(e.target.value)} disabled={guessed}>
           <option value="">プレイヤーを選択</option>
           {scene?.players.map((player) => (
             <option key={player.id} value={player.id}>

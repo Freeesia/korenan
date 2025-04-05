@@ -84,91 +84,39 @@ function Debug() {
       <h1 className="title">Debug Page</h1>
       <div className="api-container">
         <div className="api-section disabled">
-          <input
-            type="text"
-            id="username"
-            placeholder="プレイヤー名"
-            autoComplete="on"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={scene !== undefined}
-          />
-          <input
-            type="text"
-            id="aikotoba"
-            placeholder="あいことば"
-            autoComplete="on"
-            value={aikotoba}
-            onChange={(e) => setAikotoba(e.target.value)}
-            disabled={scene !== undefined}
-          />
-          <input
-            type="text"
-            placeholder="Player Topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            disabled={scene !== undefined}
-          />
+          <input type="text" id="username" placeholder="プレイヤー名" autoComplete="on" value={name} onChange={(e) => setName(e.target.value)} disabled={scene !== undefined} />
+          <input type="text" id="aikotoba" placeholder="あいことば" autoComplete="on" value={aikotoba} onChange={(e) => setAikotoba(e.target.value)} disabled={scene !== undefined} />
+          <input type="text" placeholder="Player Topic" value={topic} onChange={(e) => setTopic(e.target.value)} disabled={scene !== undefined} />
           <button onClick={registPlayer} disabled={!isFormValid}>
             Register Player
           </button>
         </div>
         <pre>{JSON.stringify(registResponse, null, 2)}</pre>
         <div className="api-section">
-          <button
-            onClick={startRound}
-            disabled={scene?.scene !== "WaitRoundStart"}
-          >
+          <button onClick={startRound} disabled={scene?.scene !== "WaitRoundStart"}>
             Start Round
           </button>
-          <button
-            onClick={nextRound}
-            disabled={scene?.scene !== "RoundSummary"}
-          >
+          <button onClick={nextRound} disabled={scene?.scene !== "RoundSummary"}>
             Next Round
           </button>
           <button onClick={resetGame}>Reset Game</button>
         </div>
         <div className="api-section">
-          <input
-            type="text"
-            placeholder="Question"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            disabled={scene?.scene !== "QuestionAnswering"}
-          />
-          <button
-            onClick={askQuestion}
-            disabled={scene?.scene !== "QuestionAnswering"}
-          >
+          <input type="text" placeholder="Question" value={question} onChange={(e) => setQuestion(e.target.value)} disabled={scene?.scene !== "QuestionAnswering"} />
+          <button onClick={askQuestion} disabled={scene?.scene !== "QuestionAnswering"}>
             Ask Question
           </button>
           <pre>{JSON.stringify(questionResponse, null, 2)}</pre>
         </div>
         <div className="api-section">
-          <input
-            type="text"
-            placeholder="Answer"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={scene?.scene !== "QuestionAnswering"}
-          />
-          <button
-            onClick={submitAnswer}
-            disabled={scene?.scene !== "QuestionAnswering"}
-          >
+          <input type="text" placeholder="Answer" value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={scene?.scene !== "QuestionAnswering"} />
+          <button onClick={submitAnswer} disabled={scene?.scene !== "QuestionAnswering"}>
             Submit Answer
           </button>
           <pre>{JSON.stringify(answerResponse, null, 2)}</pre>
         </div>
         <div className="api-section">
-          <input
-            type="text"
-            placeholder="Guess Liar"
-            value={guess}
-            onChange={(e) => setGuess(e.target.value)}
-            disabled={scene?.scene !== "LiarGuess"}
-          />
+          <input type="text" placeholder="Guess Liar" value={guess} onChange={(e) => setGuess(e.target.value)} disabled={scene?.scene !== "LiarGuess"} />
           <button onClick={guessLiar} disabled={scene?.scene !== "LiarGuess"}>
             Guess Liar
           </button>

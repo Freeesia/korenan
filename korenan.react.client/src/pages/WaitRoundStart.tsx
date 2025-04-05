@@ -1,10 +1,11 @@
 import { useContext, useEffect, useRef } from "react";
-import { SceneContext, UserContext } from "../App";
+import { SceneContext, UserContext, TitleContext } from "../App";
 import Config from "./Config";
 
 function WaitRoundStart() {
   const [scene] = useContext(SceneContext);
   const [user] = useContext(UserContext);
+  const [, setPageTitle] = useContext(TitleContext);
   const configDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -15,7 +16,9 @@ function WaitRoundStart() {
       },
       body: JSON.stringify("WaitRoundStart"),
     });
-  }, []);
+
+    setPageTitle("マッチング中");
+  }, [setPageTitle]);
 
   const startRound = async () => {
     await fetch("/api/start", { method: "POST" });
@@ -53,33 +56,24 @@ function WaitRoundStart() {
 
   return (
     <div>
-      <h1>プレイヤー待機中</h1>
       <div>
         <h2>あいことば:</h2>
         <p>
           「{scene?.aikotoba}」 <button onClick={shareAikotoba}>共有</button>
         </p>
-        <p>
-          あいことばを共有することで、みんなで同じゲームに参加できますよ！
-          「共有」ボタンを押して、あいことばをSNSなどでシェアしてくださいね。
-        </p>
+        <p>あいことばを共有することで、みんなで同じゲームに参加できますよ！ 「共有」ボタンを押して、あいことばをSNSなどでシェアしてくださいね。</p>
       </div>
       <div>
         <h2>参加プレイヤー:</h2>
         <ul>
           {scene?.players.map((player) => (
             <li key={player.id}>
-              {player.name}{" "}
-              {scene?.players[0].id === user?.id && player.id !== user?.id && (
-                <button onClick={() => banPlayer(player.id)}>BAN</button>
-              )}
+              {player.name} {scene?.players[0].id === user?.id && player.id !== user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
             </li>
           ))}
         </ul>
       </div>
-      <p>
-        全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！
-      </p>
+      <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！</p>
       <p>得点設定は「設定」ボタンから変更できます。</p>
       <button onClick={startRound}>ラウンド開始❗</button>
       <button onClick={openConfigDialog}>設定</button>

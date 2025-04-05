@@ -1,14 +1,17 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { Config } from "../models";
+import { TitleContext } from "../App";
 
 function Home() {
   const navigate = useNavigate();
   const [config, setConfig] = useState<Config>();
+  const [, setPageTitle] = useContext(TitleContext);
 
   useEffect(() => {
     fetchConfig();
-  }, []);
+    setPageTitle("これなーんだ❓(ライアー)");
+  }, [setPageTitle]);
 
   const fetchConfig = async () => {
     const response = await fetch("/api/config");

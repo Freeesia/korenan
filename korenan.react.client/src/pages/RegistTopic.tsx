@@ -1,11 +1,12 @@
 import { useContext, useState, useEffect } from "react";
-import { SceneContext, UserContext } from "../App";
+import { SceneContext, UserContext, TitleContext } from "../App";
 import { Player } from "../models";
 import { useNavigate, useLocation } from "react-router-dom";
 
 function RegistTopic() {
-  const [_, startFetchingScene] = useContext(SceneContext);
+  const [, startFetchingScene] = useContext(SceneContext);
   const [user, setUser] = useContext(UserContext);
+  const [, setPageTitle] = useContext(TitleContext);
   const [name, setName] = useState(user?.name || "");
   const [topic, setTopic] = useState("");
   const [aikotoba, setAikotoba] = useState("");
@@ -18,7 +19,9 @@ function RegistTopic() {
     if (aikotobaParam) {
       setAikotoba(aikotobaParam);
     }
-  }, [location.search]);
+
+    setPageTitle("お題登録");
+  }, [location.search, setPageTitle]);
 
   const register = async () => {
     const response = await fetch("/api/regist", {
