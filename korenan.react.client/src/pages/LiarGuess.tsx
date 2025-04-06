@@ -74,9 +74,7 @@ function LiarGuess() {
         <h2>推測結果:</h2>
         <ul>
           {sceneInfo()?.targets.map((target, index) => (
-            <li key={index}>
-              {getPlayerName(target.player)} ➡️ {getPlayerName(target.target)}
-            </li>
+            <li key={index}>{getPlayerName(target.player)}: ✅</li>
           ))}
         </ul>
       </div>
