@@ -161,45 +161,99 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
     }
 }
 
-// プレイヤー・お題登録
-api.MapPost("/regist", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] RegistRequest req) =>
+// ルーム作成
+api.MapPost("/createRoom", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] CreateRoomRequest req) =>
 {
     if (context.Session.Get<User>(nameof(User)) is not { } user)
     {
         user = new User(Guid.NewGuid(), req.Name);
         context.Session.Set(nameof(User), user);
     }
+
     if (string.IsNullOrEmpty(req.Aikotoba))
     {
-        return Results.BadRequest("Aikotoba is required.");
+        return Results.BadRequest("合言葉が必要です");
     }
+
+    // テーマが未設定の場合はエラー
+    if (string.IsNullOrEmpty(req.Theme))
+    {
+        return Results.BadRequest("ルーム作成時にはテーマの設定が必要です");
+    }
+
     var room = await cache.GetStringAsync($"game/aikotoba/{req.Aikotoba}", context.RequestAborted);
-    Game game;
-    if (string.IsNullOrEmpty(room))
+    if (!string.IsNullOrEmpty(room))
     {
-        room = Guid.NewGuid().ToString();
-        await cache.SetStringAsync($"game/aikotoba/{req.Aikotoba}", room, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
-        game = new Game(room, req.Aikotoba, [], [], [], GameScene.WaitRoundStart, new());
-        await cache.Set($"game/room/{room}", game, context.RequestAborted);
+        return Results.BadRequest("この合言葉は既に使用されています");
     }
-    else
-    {
-        game = await cache.Get<Game>($"game/room/{room}", context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
-    }
-    if (game.Players.Any(p => p.Id == user.Id))
-    {
-        return Results.BadRequest("You have already registered.");
-    }
-    if (string.IsNullOrEmpty(req.Topic))
-    {
-        return Results.BadRequest("Topic is required.");
-    }
+
+    var gameId = Guid.NewGuid().ToString();
+    await cache.SetStringAsync($"game/aikotoba/{req.Aikotoba}", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
+
+    var game = new Game(gameId, req.Aikotoba, req.Theme, [], [], [], GameScene.RegisterTopic, new());
     var player = new Player(user.Id, user.Name);
     game.Players.Add(player);
-    game.Topics.Add(player.Id, req.Topic);
-    await cache.Set($"game/room/{room}", game, context.RequestAborted);
-    await cache.SetStringAsync($"user/{user.Id}/room", room, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
-    return Results.Ok(user);
+
+    await cache.Set($"game/room/{gameId}", game, context.RequestAborted);
+    await cache.SetStringAsync($"user/{user.Id}/room", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
+
+    return Results.Ok(new { user, theme = game.Theme });
+});
+
+// ルーム参加
+api.MapPost("/joinRoom", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] JoinRoomRequest req) =>
+{
+    if (context.Session.Get<User>(nameof(User)) is not { } user)
+    {
+        user = new User(Guid.NewGuid(), req.Name);
+        context.Session.Set(nameof(User), user);
+    }
+
+    if (string.IsNullOrEmpty(req.Aikotoba))
+    {
+        return Results.BadRequest("合言葉が必要です");
+    }
+
+    var gameId = await cache.GetStringAsync($"game/aikotoba/{req.Aikotoba}", context.RequestAborted);
+    if (string.IsNullOrEmpty(gameId))
+    {
+        return Results.BadRequest("指定された合言葉のルームが見つかりません");
+    }
+
+    var game = await cache.Get<Game>($"game/room/{gameId}", context.RequestAborted) ?? throw new InvalidOperationException("ゲームが見つかりません");
+
+    if (game.Players.Any(p => p.Id == user.Id))
+    {
+        return Results.BadRequest("すでに登録済みです");
+    }
+
+    var player = new Player(user.Id, user.Name);
+    game.Players.Add(player);
+
+    await cache.Set($"game/room/{gameId}", game, context.RequestAborted);
+    await cache.SetStringAsync($"user/{user.Id}/room", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
+
+    return Results.Ok(new { user, theme = game.Theme });
+});
+
+// お題登録
+api.MapPost("/topic", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] string topic) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("ユーザーが見つかりません");
+    var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("ゲームが見つかりません");
+
+    if (string.IsNullOrEmpty(topic))
+    {
+        return Results.BadRequest("お題が必要です");
+    }
+
+    await cache.Update<Game>($"game/room/{game.Id}", g =>
+    {
+        g.Topics.Add(user.Id, topic);
+        return g;
+    }, context.RequestAborted);
+
+    return Results.Ok();
 });
 
 var startLock = new KeyedAsyncLock();
@@ -608,7 +662,13 @@ app.MapDefaultEndpoints();
 app.MapFallbackToFile("/index.html");
 app.Run();
 
-record RegistRequest(string Name, string Topic, string Aikotoba);
+record RegistRequest(string Name, string Aikotoba, string? Theme);
+
+// ルーム作成リクエスト
+record CreateRoomRequest(string Name, string Aikotoba, string Theme);
+
+// ルーム参加リクエスト
+record JoinRoomRequest(string Name, string Aikotoba);
 
 record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, GoogleSearchParam GoogleSearch);
 record QuestionResponse(string Reason, QuestionResultType Result);
