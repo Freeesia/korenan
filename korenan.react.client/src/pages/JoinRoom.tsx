@@ -36,7 +36,7 @@ function JoinRoom() {
     }
 
     const data = await response.json();
-    setUser(data.user);
+    setUser(data);
     await startFetchingScene();
     navigate("/RegisterTopic");
   };
