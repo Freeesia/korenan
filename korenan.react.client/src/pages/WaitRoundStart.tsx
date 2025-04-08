@@ -25,7 +25,7 @@ function WaitRoundStart() {
   };
 
   const shareAikotoba = () => {
-    const url = `${window.location.origin}/regist?aikotoba=${scene?.aikotoba}`;
+    const url = `${window.location.origin}/joinRoom?aikotoba=${scene?.aikotoba}`;
     if (navigator.share) {
       navigator.share({
         title: "これなんに招待",
@@ -56,6 +56,10 @@ function WaitRoundStart() {
 
   return (
     <div>
+      <div>
+        <h2>テーマ:</h2>
+        <p>「{scene?.theme}」</p>
+      </div>
       <div>
         <h2>あいことば:</h2>
         <p>

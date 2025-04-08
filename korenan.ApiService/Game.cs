@@ -28,16 +28,6 @@ public record Game(
 public enum GameScene
 {
     /// <summary>
-    /// ルーム作成フェーズ
-    /// </summary>
-    CreateRoom,
-
-    /// <summary>
-    /// ルーム参加フェーズ
-    /// </summary>
-    JoinRoom,
-
-    /// <summary>
     /// お題登録フェーズ
     /// </summary>
     RegisterTopic,

@@ -550,6 +550,7 @@ api.MapGet("/scene", async (HttpContext context, [FromServices] IBufferDistribut
         : Results.Ok(new CurrentScene(
             game.Id,
             game.Aikotoba,
+            game.Theme,
             game.CurrentScene,
             game.Rounds.Count,
             game.Players.ToArray(),
@@ -674,7 +675,7 @@ record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, Goog
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
-record CurrentScene(string Id, string Aikotoba, GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
+record CurrentScene(string Id, string Aikotoba, string Theme, GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
 
 [JsonDerivedType(typeof(WaitRoundSceneInfo))]
 [JsonDerivedType(typeof(TopicSelectingSceneInfo))]

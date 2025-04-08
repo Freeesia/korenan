@@ -10,6 +10,8 @@ import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarGuess from "./pages/LiarGuess";
 import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
+import CreateRoom from "./pages/CreateRoom";
+import JoinRoom from "./pages/JoinRoom";
 import { CurrentScene, User } from "./models";
 
 const APP_TITLE = "コレナン";
@@ -98,7 +100,7 @@ function App() {
     if (currentPath === "debug") {
       return;
     }
-    if (currentPath === "regist" && !scene) {
+    if ((currentPath === "createRoom" || currentPath === "joinRoom") && !scene) {
       return;
     }
     const page = scene?.scene ?? "";
@@ -151,6 +153,8 @@ function App() {
               <Route path="/LiarGuess" element={<LiarGuess />} />
               <Route path="/RoundSummary" element={<RoundSummary />} />
               <Route path="/GameEnd" element={<GameEnd />} />
+              <Route path="/CreateRoom" element={<CreateRoom />} />
+              <Route path="/JoinRoom" element={<JoinRoom />} />
             </Routes>
             <footer>
               <div>
