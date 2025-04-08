@@ -3,7 +3,7 @@ import { createContext, useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import Home from "./pages/Home";
 import Debug from "./pages/Debug";
-import RegistTopic from "./pages/RegistTopic";
+import RegisterTopic from "./pages/RegisterTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
 import TopicSelecting from "./pages/TopicSelecting";
 import QuestionAnswering from "./pages/QuestionAnswering";
@@ -146,7 +146,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/debug" element={<Debug />} />
-              <Route path="/regist" element={<RegistTopic />} />
+              <Route path="/RegisterTopic" element={<RegisterTopic />} />
               <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
               <Route path="/TopicSelecting" element={<TopicSelecting />} />
               <Route path="/QuestionAnswering" element={<QuestionAnswering />} />

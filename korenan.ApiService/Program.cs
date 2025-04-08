@@ -197,7 +197,7 @@ api.MapPost("/createRoom", async (HttpContext context, [FromServices] IBufferDis
     await cache.Set($"game/room/{gameId}", game, context.RequestAborted);
     await cache.SetStringAsync($"user/{user.Id}/room", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
 
-    return Results.Ok(new { user, theme = game.Theme });
+    return Results.Ok(user);
 });
 
 // ルーム参加
@@ -233,7 +233,7 @@ api.MapPost("/joinRoom", async (HttpContext context, [FromServices] IBufferDistr
     await cache.Set($"game/room/{gameId}", game, context.RequestAborted);
     await cache.SetStringAsync($"user/{user.Id}/room", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
 
-    return Results.Ok(new { user, theme = game.Theme });
+    return Results.Ok(user);
 });
 
 // お題登録
@@ -556,6 +556,8 @@ api.MapGet("/scene", async (HttpContext context, [FromServices] IBufferDistribut
             game.Players.ToArray(),
             game.CurrentScene switch
             {
+                GameScene.RegisterTopic
+                    => new EmptySceneInfo(),
                 GameScene.WaitRoundStart
                     => new WaitRoundSceneInfo(
                         game.Players.Where(p => p.CurrentScene == game.CurrentScene).Count()),
@@ -677,6 +679,7 @@ record AnswerResponse(string Reason, AnswerResultType Result);
 
 record CurrentScene(string Id, string Aikotoba, string Theme, GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
 
+[JsonDerivedType(typeof(EmptySceneInfo))]
 [JsonDerivedType(typeof(WaitRoundSceneInfo))]
 [JsonDerivedType(typeof(TopicSelectingSceneInfo))]
 [JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
@@ -692,6 +695,7 @@ record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, LiarGuess[] 
 record RoundSummaryInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
+record EmptySceneInfo() : ISceneInfo;
 
 static class Extensions
 {

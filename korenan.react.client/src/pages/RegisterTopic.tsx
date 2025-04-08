@@ -33,7 +33,6 @@ function RegisterTopic() {
 
   return (
     <div>
-      <h1>お題登録</h1>
       {scene?.theme && (
         <div>
           <h2>テーマ: {scene.theme}</h2>
