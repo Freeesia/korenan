@@ -317,7 +317,12 @@ static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCac
         ]);
     var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray();
     var round = new Round(topic, topicInfo, liars, [], []);
-    await cache.Update<Game>($"game/room/{game.Id}", g => g with { CurrentScene = GameScene.QuestionAnswering, Rounds = [.. g.Rounds, round] }, token);
+    await cache.Update<Game>($"game/room/{game.Id}", g => g with
+    {
+        Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.QuestionAnswering })],
+        CurrentScene = GameScene.QuestionAnswering,
+        Rounds = [.. g.Rounds, round]
+    }, token);
 }
 
 // 質問と回答
