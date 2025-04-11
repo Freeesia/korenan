@@ -1,12 +1,10 @@
 import { useContext, useState, useEffect } from "react";
 import { SceneContext, TitleContext } from "../App";
-import { useNavigate } from "react-router-dom";
 
 function RegisterTopic() {
   const [scene] = useContext(SceneContext);
   const [, setPageTitle] = useContext(TitleContext);
   const [topic, setTopic] = useState("");
-  const navigate = useNavigate();
 
   useEffect(() => {
     setPageTitle("お題登録");
@@ -25,8 +23,6 @@ function RegisterTopic() {
       alert("お題登録に失敗しました");
       return;
     }
-
-    navigate("/WaitRoundStart");
   };
 
   const isFormValid = topic;
