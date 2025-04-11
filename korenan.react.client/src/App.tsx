@@ -84,6 +84,9 @@ function App() {
   };
 
   const navigateToHome = useCallback(() => {
+    if (location.pathname === "/") {
+      return;
+    }
     document.startViewTransition(() => {
       navigate("/");
     });
