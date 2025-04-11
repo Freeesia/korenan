@@ -47,6 +47,10 @@ function WaitRoundStart() {
     configDialogRef.current?.close();
   };
 
+  const isHost = () => {
+    return scene?.players[0].id === user?.id;
+  };
+
   const getScene = (scene: GameScene) => {
     switch (scene) {
       case "RegisterTopic":
@@ -91,13 +95,22 @@ function WaitRoundStart() {
           ))}
         </ul>
       </div>
-      <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！</p>
-      <p>得点設定は「設定」ボタンから変更できます。</p>
-      <button onClick={startRound}>ラウンド開始❗</button>
-      <button onClick={openConfigDialog}>設定</button>
-      <dialog ref={configDialogRef}>
-        <Config onClose={closeConfigDialog} />
-      </dialog>
+      {isHost() ? (
+        <div>
+          <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！</p>
+          <button onClick={startRound}>ラウンド開始❗</button>
+          <p>得点設定は「設定」ボタンから変更できます。</p>
+          <button onClick={openConfigDialog}>設定</button>
+          <dialog ref={configDialogRef}>
+            <Config onClose={closeConfigDialog} />
+          </dialog>
+        </div>
+      ) : (
+        <p>
+          ホストは「{scene?.players[0].name}」さんです。<br />
+          ホストがラウンド開始するまでしばらくお待ちください。
+        </p>
+      )}
     </div>
   );
 }
