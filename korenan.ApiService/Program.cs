@@ -116,7 +116,11 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                         {
                             liar.Points += g.Config.NoCorrectPoint;
                         }
-                        return g with { CurrentScene = GameScene.LiarGuess };
+                        return g with
+                        {
+                            Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
+                            CurrentScene = GameScene.LiarGuess,
+                        };
                     },
                     token);
             }
@@ -131,6 +135,7 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                 var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
                 foreach (var p in game.Players)
                 {
+                    p.CurrentScene = GameScene.RoundSummary;
                     var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
                     if (liars.Contains(liar.Target))
                     {
@@ -148,7 +153,11 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                 }
                 if (game.Topics.Count == game.Rounds.Count)
                 {
-                    await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.GameEnd }, token);
+                    await cache.Set($"game/room/{game.Id}", game with
+                    {
+                        Players = [.. game.Players.Select(p => p with { CurrentScene = GameScene.GameEnd })],
+                        CurrentScene = GameScene.GameEnd,
+                    }, token);
                 }
                 else
                 {
