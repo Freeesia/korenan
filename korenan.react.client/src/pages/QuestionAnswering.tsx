@@ -139,6 +139,7 @@ function QuestionAnswering() {
         <br />
         お題が分かったら、「解答」ボタンで答えてみてね！
       </p>
+      <h3>テーマ: 「{scene?.theme}」</h3>
       <div>
         <ul>
           {sceneInfo()?.histories.map((history, index) => (
