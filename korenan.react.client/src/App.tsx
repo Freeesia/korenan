@@ -83,11 +83,11 @@ function App() {
     setMenuOpen(!menuOpen);
   };
 
-  const navigateToHome = () => {
+  const navigateToHome = useCallback(() => {
     document.startViewTransition(() => {
       navigate("/");
     });
-  };
+  }, [navigate]);
 
   useEffect(() => {
     fetchUser();
@@ -97,20 +97,38 @@ function App() {
 
   useEffect(() => {
     const currentPath = location.pathname.substring(1);
+    // デバッグ画面は常に表示可能
     if (currentPath === "debug") {
       return;
     }
+    // ルーム作成・参加画面はシーン情報がない場合は表示可能
     if ((currentPath === "createRoom" || currentPath === "joinRoom") && !scene) {
       return;
     }
-    const page = scene?.scene ?? "";
-    if (page === currentPath) {
+    // シーン情報かユーザーがない場合はホームに遷移
+    if (!scene || !user) {
+      navigateToHome();
       return;
     }
-    document.startViewTransition(() => {
-      navigate(`/${page}`, { replace: true });
-    });
-  }, [scene, location, navigate]);
+
+    // プレイヤー個別の状態を取得
+    const currentPlayer = scene.players.find((p) => p.id === user.id);
+    if (!currentPlayer) {
+      navigateToHome();
+      return;
+    }
+    // プレイヤー個別のシーン状態を優先
+    const playerScene = currentPlayer.currentScene;
+
+    // 現在表示しているシーンがプレイヤーのシーンと異なる場合は遷移
+    if (playerScene && playerScene !== currentPath) {
+      console.log(`Navigating to player scene: ${playerScene}`);
+      document.startViewTransition(() => {
+        navigate(`/${playerScene}`, { replace: true });
+      });
+      return;
+    }
+  }, [scene, user, location, navigate, navigateToHome]);
 
   return (
     <SceneContext.Provider value={[scene, startFetchingScene]}>

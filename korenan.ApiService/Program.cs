@@ -250,6 +250,11 @@ api.MapPost("/topic", async (HttpContext context, [FromServices] IBufferDistribu
     await cache.Update<Game>($"game/room/{game.Id}", g =>
     {
         g.Topics.Add(user.Id, topic);
+
+        // お題登録後にプレイヤーの状態をWaitRoundStartに変更する
+        var player = g.Players.First(p => p.Id == user.Id);
+        player.CurrentScene = GameScene.WaitRoundStart;
+
         return g;
     }, context.RequestAborted);
 

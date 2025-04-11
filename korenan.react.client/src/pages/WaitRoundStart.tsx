@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef } from "react";
 import { SceneContext, UserContext, TitleContext } from "../App";
 import Config from "./Config";
+import { GameScene } from "../models";
 
 function WaitRoundStart() {
   const [scene] = useContext(SceneContext);
@@ -46,6 +47,17 @@ function WaitRoundStart() {
     configDialogRef.current?.close();
   };
 
+  const getScene = (scene: GameScene) => {
+    switch (scene) {
+      case "RegisterTopic":
+        return "お題考え中…🤔🤔🤔";
+      case "WaitRoundStart":
+        return "準備完了👍";
+      default:
+        return "なんかおかしい🫠";
+    }
+  };
+
   const banPlayer = async (playerId: string) => {
     await fetch("/api/ban", {
       method: "POST",
@@ -72,7 +84,9 @@ function WaitRoundStart() {
         <ul>
           {scene?.players.map((player) => (
             <li key={player.id}>
-              {player.name} {scene?.players[0].id === user?.id && player.id !== user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
+              {player.name}
+              {getScene(player.currentScene)}
+              {scene?.players[0].id === user?.id && player.id !== user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
             </li>
           ))}
         </ul>
