@@ -61,7 +61,6 @@ export type ISceneInfo =
   | WaitRoundSceneInfo
   | QuestionAnsweringSceneInfo
   | LiarGuessSceneInfo
-  | RoundSummaryInfo
   | GameEndInfo;
 
 export interface WaitRoundSceneInfo {
@@ -83,12 +82,6 @@ export interface LiarGuess {
   target: string;
 }
 
-export interface RoundSummaryInfo {
-  topic: string;
-  topicCorrectPlayers: string[];
-  liarCorrectPlayers: string[];
-}
-
 export interface RoundResult {
   topic: string;
   topicCorrectPlayers: string[];
@@ -106,7 +99,6 @@ export const GameScene = [
   "TopicSelecting",
   "QuestionAnswering",
   "LiarGuess",
-  "RoundSummary",
   "GameEnd",
 ] as const;
 

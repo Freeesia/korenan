@@ -8,7 +8,6 @@ import WaitRoundStart from "./pages/WaitRoundStart";
 import TopicSelecting from "./pages/TopicSelecting";
 import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarGuess from "./pages/LiarGuess";
-import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
 import CreateRoom from "./pages/CreateRoom";
 import JoinRoom from "./pages/JoinRoom";
@@ -177,7 +176,6 @@ function App() {
               <Route path="/TopicSelecting" element={<TopicSelecting />} />
               <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
               <Route path="/LiarGuess" element={<LiarGuess />} />
-              <Route path="/RoundSummary" element={<RoundSummary />} />
               <Route path="/GameEnd" element={<GameEnd />} />
               <Route path="/CreateRoom" element={<CreateRoom />} />
               <Route path="/JoinRoom" element={<JoinRoom />} />

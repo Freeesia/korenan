@@ -101,7 +101,7 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
         case GameScene.QuestionAnswering:
             {
                 var round = game.Rounds.Last();
-                // すべてのプレイヤーが解答制限に達した場合、ライアーを推理
+                // すべてのプレイヤーが解答制限に達した場合、ライアー推理シーンに遷移
                 var playerAnswers = round.Histories.Select(h => h.Result).OfType<AnswerResult>().GroupBy(h => h.Player).ToDictionary(g => g.Key, g => g.Count());
                 if (game.Players.Select(p => playerAnswers.TryGetValue(p.Id, out var count) ? count : 0).Any(c => c < game.Config.AnswerLimit))
                 {
@@ -109,59 +109,58 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                 }
                 await cache.Update<Game>(
                     $"game/room/{game.Id}",
-                    g =>
+                    g => g with
                     {
-                        var liars = g.Topics.Where(p => round.Topic == p.Value).Select(p => g.Players.First(pl => pl.Id == p.Key)).ToArray();
-                        foreach (var liar in liars)
-                        {
-                            liar.Points += g.Config.NoCorrectPoint;
-                        }
-                        return g with
-                        {
-                            Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
-                            CurrentScene = GameScene.LiarGuess,
-                        };
+                        Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
+                        CurrentScene = GameScene.LiarGuess,
                     },
                     token);
             }
             break;
         case GameScene.LiarGuess:
             {
-                var round = game.Rounds.Last();
-                if (game.Players.ExceptBy(round.LiarGuesses.Select(t => t.Player), p => p.Id).Any())
+                // 最新ラウンドで全員がライアー指摘を終えていなければ何もしない
+                if (game.Players.ExceptBy(game.Rounds[^1].LiarGuesses.Select(t => t.Player), p => p.Id).Any())
                 {
                     return;
                 }
-                var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
-                foreach (var p in game.Players)
+
+                // 全ラウンド終了していなければ次のラウンドを開始
+                if (game.Topics.Count != game.Rounds.Count)
                 {
-                    p.CurrentScene = GameScene.RoundSummary;
-                    var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
-                    if (liars.Contains(liar.Target))
+                    await StartNextRound(game, kernel, cache, token);
+                }
+                else
+                {
+                    // ライアーポイントの計算
+                    foreach (var round in game.Rounds)
                     {
-                        p.Points += game.Config.CorrectPoint;
+                        var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
+                        // 誰もお題を当てられなかった場合、ライアーは正解者なしとしてポイントを獲得
+                        if (!round.Histories.Any(h => h.Result is AnswerResult { Result: AnswerResultType.Correct }))
+                        {
+                            foreach (var liar in liars)
+                            {
+                                var player = game.Players.First(p => p.Id == liar);
+                                player.Points += game.Config.NoCorrectPoint;
+                            }
+                        }
+                        // ライアーを当てた場合、正解者はポイントを獲得
+                        foreach (var p in game.Players)
+                        {
+                            var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
+                            if (liars.Contains(liar.Target))
+                            {
+                                p.Points += game.Config.LiarPoint;
+                            }
+                        }
                     }
-                }
-                await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.RoundSummary }, token);
-            }
-            break;
-        case GameScene.RoundSummary:
-            {
-                if (game.Players.Any(p => p.CurrentScene != GameScene.WaitRoundStart))
-                {
-                    return;
-                }
-                if (game.Topics.Count == game.Rounds.Count)
-                {
+
                     await cache.Set($"game/room/{game.Id}", game with
                     {
                         Players = [.. game.Players.Select(p => p with { CurrentScene = GameScene.GameEnd })],
                         CurrentScene = GameScene.GameEnd,
                     }, token);
-                }
-                else
-                {
-                    await StartNextRound(game, kernel, cache, token);
                 }
             }
             break;
@@ -294,24 +293,6 @@ api.MapPost("/start", async (HttpContext context, [FromServices] IBufferDistribu
 
     // ゲーム開始時にあいことばを消して使いまわせるようにする
     await cache.RemoveAsync($"game/aikotoba/{game.Aikotoba}", context.RequestAborted);
-    return Results.Ok();
-});
-
-api.MapPost("/next", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromServices] Kernel kernel) =>
-{
-    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
-    var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
-    if (game.CurrentScene != GameScene.RoundSummary)
-    {
-        return Results.BadRequest("直前のラウンドが終わっていません");
-    }
-    game = await cache.Update<Game>($"game/room/{game.Id}", g =>
-    {
-        var player = g.Players.First(p => p.Id == user.Id);
-        player.CurrentScene = GameScene.WaitRoundStart;
-        return g;
-    }, context.RequestAborted);
-    await NextScene(cache, game, kernel, context.RequestAborted);
     return Results.Ok();
 });
 
@@ -607,17 +588,6 @@ api.MapGet("/scene", async (HttpContext context, [FromServices] IBufferDistribut
                             .Select(h => h.Player)
                             .ToArray(),
                         [.. game.Rounds.Last().LiarGuesses.Select(g => g.Player)]),
-                GameScene.RoundSummary
-                    => new RoundSummaryInfo(
-                        game.Rounds.Last().Topic,
-                        game.Rounds.Last()
-                            .GetCorrectPlayers()
-                            .ToArray(),
-                        game.Rounds.Last()
-                            .LiarGuesses
-                            .Where(t => game.Rounds.Last().Liars.Contains(t.Target))
-                            .Select(t => t.Player)
-                            .ToArray()),
                 GameScene.GameEnd
                     => new GameEndInfo(
                         game.Rounds.Select(r =>
@@ -712,7 +682,6 @@ record CurrentScene(string Id, string Aikotoba, string Theme, GameScene Scene, i
 [JsonDerivedType(typeof(TopicSelectingSceneInfo))]
 [JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
 [JsonDerivedType(typeof(LiarGuessSceneInfo))]
-[JsonDerivedType(typeof(RoundSummaryInfo))]
 [JsonDerivedType(typeof(GameEndInfo))]
 interface ISceneInfo;
 
@@ -720,7 +689,6 @@ record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
 record TopicSelectingSceneInfo() : ISceneInfo;
 record QuestionAnsweringSceneInfo(IPlayerResult[] Histories) : ISceneInfo;
 record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] GuessedPlayers) : ISceneInfo;
-record RoundSummaryInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 record EmptySceneInfo() : ISceneInfo;

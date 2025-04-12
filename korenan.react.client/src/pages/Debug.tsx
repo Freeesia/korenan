@@ -96,9 +96,6 @@ function Debug() {
           <button onClick={startRound} disabled={scene?.scene !== "WaitRoundStart"}>
             Start Round
           </button>
-          <button onClick={nextRound} disabled={scene?.scene !== "RoundSummary"}>
-            Next Round
-          </button>
           <button onClick={resetGame}>Reset Game</button>
         </div>
         <div className="api-section">

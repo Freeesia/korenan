@@ -53,11 +53,6 @@ public enum GameScene
     LiarGuess,
 
     /// <summary>
-    /// ラウンドの結果を表示するフェーズ
-    /// </summary>
-    RoundSummary,
-
-    /// <summary>
     /// すべてのラウンドが終了し、ゲームの結果を表示するフェーズ
     /// </summary>
     GameEnd,
