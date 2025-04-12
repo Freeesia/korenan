@@ -199,7 +199,7 @@ api.MapPost("/createRoom", async (HttpContext context, [FromServices] IBufferDis
     var gameId = Guid.NewGuid().ToString();
     await cache.SetStringAsync($"game/aikotoba/{req.Aikotoba}", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
 
-    var game = new Game(gameId, req.Aikotoba, req.Theme, [], [], [], GameScene.RegisterTopic, new());
+    var game = new Game(gameId, req.Aikotoba, req.Theme, [], [], [], GameScene.WaitRoundStart, new());
     var player = new Player(user.Id, user.Name);
     game.Players.Add(player);
 

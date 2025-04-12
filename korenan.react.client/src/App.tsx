@@ -83,14 +83,21 @@ function App() {
     setMenuOpen(!menuOpen);
   };
 
-  const navigateToHome = useCallback(() => {
-    if (location.pathname === "/") {
-      return;
-    }
-    document.startViewTransition(() => {
-      navigate("/");
-    });
-  }, [navigate]);
+  const navigateTo = useCallback(
+    (path: string) => {
+      if (location.pathname === path) {
+        return;
+      }
+      document.startViewTransition(() => {
+        navigate(path);
+      });
+    },
+    [navigate, location.pathname]
+  );
+
+  const navigateToHome = () => {
+    navigateTo("/");
+  };
 
   useEffect(() => {
     fetchUser();
@@ -120,18 +127,16 @@ function App() {
       navigateToHome();
       return;
     }
-    // プレイヤー個別のシーン状態を優先
     const playerScene = currentPlayer.currentScene;
+    const gameScene = scene.scene;
 
-    // 現在表示しているシーンがプレイヤーのシーンと異なる場合は遷移
-    if (playerScene && playerScene !== currentPath) {
-      console.log(`Navigating to player scene: ${playerScene}`);
-      document.startViewTransition(() => {
-        navigate(`/${playerScene}`, { replace: true });
-      });
-      return;
+    // ゲームシーンに応じて遷移
+    if (scene.scene === "WaitRoundStart") {
+      navigateTo(`/${playerScene}`);
+    } else {
+      navigateTo(`/${gameScene}`);
     }
-  }, [scene, user, location, navigate, navigateToHome]);
+  }, [scene, user, location, navigateToHome]);
 
   return (
     <SceneContext.Provider value={[scene, startFetchingScene]}>

@@ -103,6 +103,7 @@ export interface GameEndInfo {
 export const GameScene = [
   "RegisterTopic",
   "WaitRoundStart",
+  "TopicSelecting",
   "QuestionAnswering",
   "LiarGuess",
   "RoundSummary",
