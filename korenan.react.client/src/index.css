@@ -70,24 +70,6 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-.app-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  justify-content: space-between;
-}
-
-/* モバイル向けに調整（古いnavスタイルを削除） */
-footer {
-  background-color: #333;
-  padding: 1em;
-  text-align: center;
-  position: fixed;
-  width: 100%;
-  left: 0;
-  bottom: 0;
-}
-
 /* タッチデバイス向け最適化 */
 @media (hover: none) {
   a:hover,

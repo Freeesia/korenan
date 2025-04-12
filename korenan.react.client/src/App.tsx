@@ -58,7 +58,7 @@ function App() {
     }
 
     setLastFetchTime(new Date());
-  }, [stopFetchingScene, user]);
+  }, [stopFetchingScene]);
 
   const fetchUser = async () => {
     const response = await fetch("/api/me");
@@ -178,21 +178,23 @@ function App() {
                 </ul>
               </div>
             </nav>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/debug" element={<Debug />} />
-              <Route path="/RegisterTopic" element={<RegisterTopic />} />
-              <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
-              <Route path="/TopicSelecting" element={<TopicSelecting />} />
-              <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
-              <Route path="/LiarGuess" element={<LiarGuess />} />
-              <Route path="/GameEnd" element={<GameEnd />} />
-              <Route path="/CreateRoom" element={<CreateRoom />} />
-              <Route path="/JoinRoom" element={<JoinRoom />} />
-            </Routes>
+            <div className="app-content">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/debug" element={<Debug />} />
+                <Route path="/RegisterTopic" element={<RegisterTopic />} />
+                <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
+                <Route path="/TopicSelecting" element={<TopicSelecting />} />
+                <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
+                <Route path="/LiarGuess" element={<LiarGuess />} />
+                <Route path="/GameEnd" element={<GameEnd />} />
+                <Route path="/CreateRoom" element={<CreateRoom />} />
+                <Route path="/JoinRoom" element={<JoinRoom />} />
+              </Routes>
+            </div>
             <footer>
               <div>
-                最終更新日時: {lastFetchTime?.toLocaleTimeString()} | プレイヤー: {user?.name}
+                {scene && `最終更新: ${lastFetchTime?.toLocaleTimeString()} | `}プレイヤー: {user?.name}
                 {scene && ` (得点: ${points})`}
               </div>
             </footer>

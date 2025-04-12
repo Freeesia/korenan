@@ -3,6 +3,39 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  flex: 1;
+  justify-content: space-between;
+}
+
+/* メインコンテンツエリア - フッターの高さ分の余白を確保 */
+.app-content {
+  flex: 1;
+  padding-bottom: 60px;
+}
+
+/* フッター */
+footer {
+  background-color: #333;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 0.5rem;
+  text-align: center;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 th,
@@ -26,7 +59,7 @@ td {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.5rem;
 }
 
 .app-title {
