@@ -13,7 +13,12 @@ function CreateRoom() {
 
   useEffect(() => {
     setPageTitle("ルーム作成");
-  }, [setPageTitle]);
+
+    // ユーザーコンテキストに値がある場合はユーザー名を更新
+    if (user?.name && !name) {
+      setName(user.name);
+    }
+  }, [setPageTitle, user, name]);
 
   const createRoom = async () => {
     const response = await fetch("/api/createRoom", {

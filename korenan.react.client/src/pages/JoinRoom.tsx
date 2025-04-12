@@ -19,7 +19,12 @@ function JoinRoom() {
     }
 
     setPageTitle("ルーム参加");
-  }, [location.search, setPageTitle]);
+
+    // ユーザーコンテキストに値がある場合はユーザー名を更新
+    if (user?.name && !name) {
+      setName(user.name);
+    }
+  }, [location.search, setPageTitle, user, name]);
 
   const joinRoom = async () => {
     const response = await fetch("/api/joinRoom", {
