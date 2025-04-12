@@ -35,10 +35,6 @@ function Debug() {
     fetch("/api/start", { method: "POST" });
   };
 
-  const nextRound = async () => {
-    await fetch("/api/next", { method: "POST" });
-  };
-
   const askQuestion = async () => {
     const response = await fetch("/api/question", {
       method: "POST",
