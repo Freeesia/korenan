@@ -321,8 +321,8 @@ static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCac
     var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
     var topic = topics[Random.Shared.Next(topics.Length)];
     var topicInfo = string.Join(Environment.NewLine, [
-        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = topic }, token),
-        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = topic }, token),
+        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = $"\"{topic}\" \"{game.Theme}\"" }, token),
+        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = $"intitle:\"{topic}\" deepcat:\"{game.Theme}\"" }, token),
         ]);
     var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray();
     var round = new Round(topic, topicInfo, liars, [], []);
@@ -376,9 +376,12 @@ api.MapPost("/question", async (HttpContext context, [FromServices] IBufferDistr
     questionPrompt.AddExecutionSettings(geminiSettings);
     var questionFunc = kernel.CreateFunctionFromPrompt(questionPrompt);
     kernel.ImportPluginFromFunctions("question", [questionFunc]);
-    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme, geminiSettings);
     var prompt = new PromptTemplateConfig("""
         次の参考情報を基にして、ユーザーの質問に回答してください。
+
+        ## テーマ
+        {{$theme}}
 
         ## 対象
         {{$topic}}
@@ -412,7 +415,7 @@ api.MapPost("/question", async (HttpContext context, [FromServices] IBufferDistr
     prompt.AddExecutionSettings(geminiSettings);
     var result = await kernel.InvokeAsync(
         kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords });
+        new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords, ["theme"] = game.Theme });
 
     var res = result.GetFromJson<QuestionResponse>();
     await cache.Update<Game>(
@@ -455,7 +458,7 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
             context.RequestAborted);
         return AnswerResultType.Correct;
     }
-    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme, geminiSettings);
     var prompt = new PromptTemplateConfig("""
         あなたはお題を当てるクイズの出題者であり、ユーザーの解答に対してお題と一致するかを判断する専門家です。
         参考情報を基にして、ユーザーの解答がお題と比較して直接的に同一存在かどうかを判断してください。
@@ -692,8 +695,6 @@ app.MapDefaultEndpoints();
 app.MapFallbackToFile("/index.html");
 app.Run();
 
-record RegistRequest(string Name, string Aikotoba, string? Theme);
-
 // ルーム作成リクエスト
 record CreateRoomRequest(string Name, string Aikotoba, string Theme);
 
@@ -735,10 +736,13 @@ static class Extensions
         }
     };
 
-    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, PromptExecutionSettings settings)
+    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, string theme, PromptExecutionSettings settings)
     {
         var ptompt = new PromptTemplateConfig("""
         対象の2つの単語、文章の関係性を検索エンジンで調査するためのキーワードを生成してください。
+
+        ## テーマ
+        {{$theme}}
 
         ## 対象
         * {{$correct}}
@@ -757,11 +761,11 @@ static class Extensions
         """)
         {
             Name = "keywords",
-            InputVariables = [new() { Name = "correct" }, new() { Name = "target" }],
+            InputVariables = [new() { Name = "correct" }, new() { Name = "target" }, new() { Name = "theme" }],
         };
         ptompt.AddExecutionSettings(settings);
         var keywordsFunc = kernel.CreateFunctionFromPrompt(ptompt);
-        return await keywordsFunc.InvokeAsync<string>(kernel, new() { ["correct"] = correct, ["target"] = target }) ?? string.Empty;
+        return await keywordsFunc.InvokeAsync<string>(kernel, new() { ["correct"] = correct, ["target"] = target, ["theme"] = theme }) ?? string.Empty;
     }
 
     public static T GetFromJson<T>(this FunctionResult result)
