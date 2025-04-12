@@ -13,7 +13,7 @@ import CreateRoom from "./pages/CreateRoom";
 import JoinRoom from "./pages/JoinRoom";
 import { CurrentScene, User } from "./models";
 
-const APP_TITLE = "コレナン";
+const APP_TITLE = "これなーんだ❓(ライアー)";
 
 export const SceneContext = createContext<[CurrentScene | undefined, () => Promise<void>]>([undefined, async () => {}]);
 export const UserContext = createContext<[User | undefined, (u: User) => void]>([undefined, () => {}]);
@@ -25,6 +25,7 @@ function App() {
   const [lastFetchTime, setLastFetchTime] = useState<Date>();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pageTitle, setPageTitle] = useState(APP_TITLE);
+  const [points, setPoints] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const intervalId = useRef<NodeJS.Timeout>(undefined);
@@ -45,10 +46,19 @@ function App() {
     if (!response.ok) {
       return;
     }
-    const data = await response.json();
+    const data: CurrentScene = await response.json();
     setScene(data);
+
+    // シーン情報とユーザー情報があれば得点を更新
+    if (data && user) {
+      const currentPlayer = data.players.find((p) => p.id === user.id);
+      if (currentPlayer) {
+        setPoints(currentPlayer.points);
+      }
+    }
+
     setLastFetchTime(new Date());
-  }, [stopFetchingScene]);
+  }, [stopFetchingScene, user]);
 
   const fetchUser = async () => {
     const response = await fetch("/api/me");
@@ -183,6 +193,7 @@ function App() {
             <footer>
               <div>
                 最終更新日時: {lastFetchTime?.toLocaleTimeString()} | プレイヤー: {user?.name}
+                {scene && ` (得点: ${points})`}
               </div>
             </footer>
           </div>
