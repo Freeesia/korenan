@@ -75,6 +75,10 @@ function Debug() {
 
   const isFormValid = name && topic && aikotoba;
 
+  const goToSwagger = () => {
+    window.open("/swagger", "_blank");
+  };
+
   return (
     <div className="container">
       <h1 className="title">Debug Page</h1>
@@ -93,6 +97,7 @@ function Debug() {
             Start Round
           </button>
           <button onClick={resetGame}>Reset Game</button>
+          <button onClick={goToSwagger}>Swagger</button>
         </div>
         <div className="api-section">
           <input type="text" placeholder="Question" value={question} onChange={(e) => setQuestion(e.target.value)} disabled={scene?.scene !== "QuestionAnswering"} />
