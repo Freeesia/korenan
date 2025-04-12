@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useCallback } from "react";
 import { SceneContext, TitleContext } from "../App";
 import { RoundSummaryInfo } from "../models";
 
@@ -18,12 +18,12 @@ function RoundSummary() {
     setPageTitle("ラウンド結果");
   }, [setPageTitle]);
 
-  const sceneInfo = () => {
+  const sceneInfo = useCallback(() => {
     if (scene?.scene === "RoundSummary") {
       return scene?.info as RoundSummaryInfo;
     }
     return undefined;
-  };
+  }, [scene]);
 
   const getPlayerName = (id: string) => {
     return scene?.players.find((p) => p.id === id)?.name || id;

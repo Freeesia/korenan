@@ -54,7 +54,7 @@ function LiarGuess() {
   const getPlayerName = (id: string) => scene?.players.find((p) => p.id === id)?.name || id;
 
   useEffect(() => {
-    if (sceneInfo()?.targets.findIndex((t) => t.player === user?.id) !== -1) {
+    if (sceneInfo()?.guessedPlayers.includes(user?.id || "")) {
       setGuessed(true);
     }
   }, [scene, sceneInfo, user?.id]);
@@ -73,8 +73,8 @@ function LiarGuess() {
       <div>
         <h2>推測結果:</h2>
         <ul>
-          {sceneInfo()?.targets.map((target, index) => (
-            <li key={index}>{getPlayerName(target.player)}: ✅</li>
+          {sceneInfo()?.guessedPlayers.map((playerId, index) => (
+            <li key={index}>{getPlayerName(playerId)}: ✅</li>
           ))}
         </ul>
       </div>
@@ -82,7 +82,7 @@ function LiarGuess() {
         <h2>未回答プレイヤー:</h2>
         <ul>
           {scene?.players
-            .filter((player) => !sceneInfo()?.targets.some((t) => t.player === player.id))
+            .filter((player) => !sceneInfo()?.guessedPlayers.includes(player.id))
             .map((player) => (
               <li key={player.id}>
                 {player.name} {scene?.players[0].id === user?.id && player.id !== user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}

@@ -75,7 +75,7 @@ export interface QuestionAnsweringSceneInfo {
 export interface LiarGuessSceneInfo {
   topic: string;
   topicCorrectPlayers: string[];
-  targets: LiarGuess[];
+  guessedPlayers: string[];
 }
 
 export interface LiarGuess {
