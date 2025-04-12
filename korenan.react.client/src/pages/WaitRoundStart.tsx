@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef } from "react";
 import { SceneContext, UserContext, TitleContext } from "../App";
 import Config from "./Config";
+import { GameScene } from "../models";
 
 function WaitRoundStart() {
   const [scene] = useContext(SceneContext);
@@ -25,7 +26,7 @@ function WaitRoundStart() {
   };
 
   const shareAikotoba = () => {
-    const url = `${window.location.origin}/regist?aikotoba=${scene?.aikotoba}`;
+    const url = `${window.location.origin}/joinRoom?aikotoba=${scene?.aikotoba}`;
     if (navigator.share) {
       navigator.share({
         title: "これなんに招待",
@@ -46,6 +47,21 @@ function WaitRoundStart() {
     configDialogRef.current?.close();
   };
 
+  const isHost = () => {
+    return scene?.players[0].id === user?.id;
+  };
+
+  const getScene = (scene: GameScene) => {
+    switch (scene) {
+      case "RegisterTopic":
+        return "お題考え中…🤔🤔🤔";
+      case "WaitRoundStart":
+        return "準備完了👍";
+      default:
+        return "なんかおかしい🫠";
+    }
+  };
+
   const banPlayer = async (playerId: string) => {
     await fetch("/api/ban", {
       method: "POST",
@@ -56,6 +72,10 @@ function WaitRoundStart() {
 
   return (
     <div>
+      <div>
+        <h2>テーマ:</h2>
+        <p>「{scene?.theme}」</p>
+      </div>
       <div>
         <h2>あいことば:</h2>
         <p>
@@ -68,18 +88,29 @@ function WaitRoundStart() {
         <ul>
           {scene?.players.map((player) => (
             <li key={player.id}>
-              {player.name} {scene?.players[0].id === user?.id && player.id !== user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
+              {player.name}
+              {getScene(player.currentScene)}
+              {scene?.players[0].id === user?.id && player.id !== user?.id && <button onClick={() => banPlayer(player.id)}>BAN</button>}
             </li>
           ))}
         </ul>
       </div>
-      <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！</p>
-      <p>得点設定は「設定」ボタンから変更できます。</p>
-      <button onClick={startRound}>ラウンド開始❗</button>
-      <button onClick={openConfigDialog}>設定</button>
-      <dialog ref={configDialogRef}>
-        <Config onClose={closeConfigDialog} />
-      </dialog>
+      {isHost() ? (
+        <div>
+          <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！</p>
+          <button onClick={startRound}>ラウンド開始❗</button>
+          <p>得点設定は「設定」ボタンから変更できます。</p>
+          <button onClick={openConfigDialog}>設定</button>
+          <dialog ref={configDialogRef}>
+            <Config onClose={closeConfigDialog} />
+          </dialog>
+        </div>
+      ) : (
+        <p>
+          ホストは「{scene?.players[0].name}」さんです。<br />
+          ホストがラウンド開始するまでしばらくお待ちください。
+        </p>
+      )}
     </div>
   );
 }

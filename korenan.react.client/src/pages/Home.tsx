@@ -19,19 +19,30 @@ function Home() {
     setConfig(data);
   };
 
-  const regist = () => {
+  const navigateToCreateRoom = () => {
     document.startViewTransition(() => {
-      navigate("/regist");
+      navigate("/createRoom");
+    });
+  };
+
+  const navigateToJoinRoom = () => {
+    document.startViewTransition(() => {
+      navigate("/joinRoom");
     });
   };
 
   return (
     <div>
       <h1>これなーんだ❓(ライアー)</h1>
-      <button onClick={regist}>参加！</button>
+      <div className="action-buttons">
+        <button onClick={navigateToCreateRoom}>ルームを作成</button>
+        <button onClick={navigateToJoinRoom}>ルームに参加</button>
+      </div>
       <h2>遊び方</h2>
       <ol>
-        <li>まずは各プレイヤーが自分の名前とお題を登録します。</li>
+        <li>まずはルームを作成するか、既存のルームに参加します。</li>
+        <li>ルーム作成時にはテーマを設定します（例：「動物」「食べ物」など）。</li>
+        <li>各プレイヤーはテーマに沿ったお題を1つ登録します。</li>
         <li>全員が登録を完了したら、ゲームがスタートします。</li>
         <li>
           プレイヤーは生成AIに「はい」か「いいえ」で答えられる質問を投げかけ、回答を得ます。

@@ -3,13 +3,15 @@ import { createContext, useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import Home from "./pages/Home";
 import Debug from "./pages/Debug";
-import RegistTopic from "./pages/RegistTopic";
+import RegisterTopic from "./pages/RegisterTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
 import TopicSelecting from "./pages/TopicSelecting";
 import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarGuess from "./pages/LiarGuess";
 import RoundSummary from "./pages/RoundSummary";
 import GameEnd from "./pages/GameEnd";
+import CreateRoom from "./pages/CreateRoom";
+import JoinRoom from "./pages/JoinRoom";
 import { CurrentScene, User } from "./models";
 
 const APP_TITLE = "コレナン";
@@ -81,10 +83,20 @@ function App() {
     setMenuOpen(!menuOpen);
   };
 
+  const navigateTo = useCallback(
+    (path: string) => {
+      if (location.pathname === path) {
+        return;
+      }
+      document.startViewTransition(() => {
+        navigate(path);
+      });
+    },
+    [navigate, location.pathname]
+  );
+
   const navigateToHome = () => {
-    document.startViewTransition(() => {
-      navigate("/");
-    });
+    navigateTo("/");
   };
 
   useEffect(() => {
@@ -95,20 +107,36 @@ function App() {
 
   useEffect(() => {
     const currentPath = location.pathname.substring(1);
+    // デバッグ画面は常に表示可能
     if (currentPath === "debug") {
       return;
     }
-    if (currentPath === "regist" && !scene) {
+    // ルーム作成・参加画面はシーン情報がない場合は表示可能
+    if ((currentPath === "createRoom" || currentPath === "joinRoom") && !scene) {
       return;
     }
-    const page = scene?.scene ?? "";
-    if (page === currentPath) {
+    // シーン情報かユーザーがない場合はホームに遷移
+    if (!scene || !user) {
+      navigateToHome();
       return;
     }
-    document.startViewTransition(() => {
-      navigate(`/${page}`, { replace: true });
-    });
-  }, [scene, location, navigate]);
+
+    // プレイヤー個別の状態を取得
+    const currentPlayer = scene.players.find((p) => p.id === user.id);
+    if (!currentPlayer) {
+      navigateToHome();
+      return;
+    }
+    const playerScene = currentPlayer.currentScene;
+    const gameScene = scene.scene;
+
+    // ゲームシーンに応じて遷移
+    if (scene.scene === "WaitRoundStart") {
+      navigateTo(`/${playerScene}`);
+    } else {
+      navigateTo(`/${gameScene}`);
+    }
+  }, [scene, user, location, navigateToHome]);
 
   return (
     <SceneContext.Provider value={[scene, startFetchingScene]}>
@@ -144,13 +172,15 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/debug" element={<Debug />} />
-              <Route path="/regist" element={<RegistTopic />} />
+              <Route path="/RegisterTopic" element={<RegisterTopic />} />
               <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
               <Route path="/TopicSelecting" element={<TopicSelecting />} />
               <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
               <Route path="/LiarGuess" element={<LiarGuess />} />
               <Route path="/RoundSummary" element={<RoundSummary />} />
               <Route path="/GameEnd" element={<GameEnd />} />
+              <Route path="/CreateRoom" element={<CreateRoom />} />
+              <Route path="/JoinRoom" element={<JoinRoom />} />
             </Routes>
             <footer>
               <div>

@@ -116,7 +116,11 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                         {
                             liar.Points += g.Config.NoCorrectPoint;
                         }
-                        return g with { CurrentScene = GameScene.LiarGuess };
+                        return g with
+                        {
+                            Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
+                            CurrentScene = GameScene.LiarGuess,
+                        };
                     },
                     token);
             }
@@ -131,6 +135,7 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                 var liars = game.Topics.Where(p => round.Topic == p.Value).Select(p => p.Key).ToArray();
                 foreach (var p in game.Players)
                 {
+                    p.CurrentScene = GameScene.RoundSummary;
                     var liar = round.LiarGuesses.Find(t => t.Player == p.Id)!;
                     if (liars.Contains(liar.Target))
                     {
@@ -148,7 +153,11 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                 }
                 if (game.Topics.Count == game.Rounds.Count)
                 {
-                    await cache.Set($"game/room/{game.Id}", game with { CurrentScene = GameScene.GameEnd }, token);
+                    await cache.Set($"game/room/{game.Id}", game with
+                    {
+                        Players = [.. game.Players.Select(p => p with { CurrentScene = GameScene.GameEnd })],
+                        CurrentScene = GameScene.GameEnd,
+                    }, token);
                 }
                 else
                 {
@@ -161,45 +170,104 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
     }
 }
 
-// プレイヤー・お題登録
-api.MapPost("/regist", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] RegistRequest req) =>
+// ルーム作成
+api.MapPost("/createRoom", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] CreateRoomRequest req) =>
 {
     if (context.Session.Get<User>(nameof(User)) is not { } user)
     {
         user = new User(Guid.NewGuid(), req.Name);
         context.Session.Set(nameof(User), user);
     }
+
     if (string.IsNullOrEmpty(req.Aikotoba))
     {
-        return Results.BadRequest("Aikotoba is required.");
+        return Results.BadRequest("合言葉が必要です");
     }
+
+    // テーマが未設定の場合はエラー
+    if (string.IsNullOrEmpty(req.Theme))
+    {
+        return Results.BadRequest("ルーム作成時にはテーマの設定が必要です");
+    }
+
     var room = await cache.GetStringAsync($"game/aikotoba/{req.Aikotoba}", context.RequestAborted);
-    Game game;
-    if (string.IsNullOrEmpty(room))
+    if (!string.IsNullOrEmpty(room))
     {
-        room = Guid.NewGuid().ToString();
-        await cache.SetStringAsync($"game/aikotoba/{req.Aikotoba}", room, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
-        game = new Game(room, req.Aikotoba, [], [], [], GameScene.WaitRoundStart, new());
-        await cache.Set($"game/room/{room}", game, context.RequestAborted);
+        return Results.BadRequest("この合言葉は既に使用されています");
     }
-    else
-    {
-        game = await cache.Get<Game>($"game/room/{room}", context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
-    }
-    if (game.Players.Any(p => p.Id == user.Id))
-    {
-        return Results.BadRequest("You have already registered.");
-    }
-    if (string.IsNullOrEmpty(req.Topic))
-    {
-        return Results.BadRequest("Topic is required.");
-    }
+
+    var gameId = Guid.NewGuid().ToString();
+    await cache.SetStringAsync($"game/aikotoba/{req.Aikotoba}", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
+
+    var game = new Game(gameId, req.Aikotoba, req.Theme, [], [], [], GameScene.WaitRoundStart, new());
     var player = new Player(user.Id, user.Name);
     game.Players.Add(player);
-    game.Topics.Add(player.Id, req.Topic);
-    await cache.Set($"game/room/{room}", game, context.RequestAborted);
-    await cache.SetStringAsync($"user/{user.Id}/room", room, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
+
+    await cache.Set($"game/room/{gameId}", game, context.RequestAborted);
+    await cache.SetStringAsync($"user/{user.Id}/room", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
+
     return Results.Ok(user);
+});
+
+// ルーム参加
+api.MapPost("/joinRoom", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] JoinRoomRequest req) =>
+{
+    if (context.Session.Get<User>(nameof(User)) is not { } user)
+    {
+        user = new User(Guid.NewGuid(), req.Name);
+        context.Session.Set(nameof(User), user);
+    }
+
+    if (string.IsNullOrEmpty(req.Aikotoba))
+    {
+        return Results.BadRequest("合言葉が必要です");
+    }
+
+    var gameId = await cache.GetStringAsync($"game/aikotoba/{req.Aikotoba}", context.RequestAborted);
+    if (string.IsNullOrEmpty(gameId))
+    {
+        return Results.BadRequest("指定された合言葉のルームが見つかりません");
+    }
+
+    var game = await cache.Get<Game>($"game/room/{gameId}", context.RequestAborted) ?? throw new InvalidOperationException("ゲームが見つかりません");
+
+    if (game.Players.Any(p => p.Id == user.Id))
+    {
+        return Results.BadRequest("すでに登録済みです");
+    }
+
+    var player = new Player(user.Id, user.Name);
+    game.Players.Add(player);
+
+    await cache.Set($"game/room/{gameId}", game, context.RequestAborted);
+    await cache.SetStringAsync($"user/{user.Id}/room", gameId, new() { SlidingExpiration = TimeSpan.FromHours(1) }, context.RequestAborted);
+
+    return Results.Ok(user);
+});
+
+// お題登録
+api.MapPost("/topic", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromBody] string topic) =>
+{
+    var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("ユーザーが見つかりません");
+    var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("ゲームが見つかりません");
+
+    if (string.IsNullOrEmpty(topic))
+    {
+        return Results.BadRequest("お題が必要です");
+    }
+
+    await cache.Update<Game>($"game/room/{game.Id}", g =>
+    {
+        g.Topics.Add(user.Id, topic);
+
+        // お題登録後にプレイヤーの状態をWaitRoundStartに変更する
+        var player = g.Players.First(p => p.Id == user.Id);
+        player.CurrentScene = GameScene.WaitRoundStart;
+
+        return g;
+    }, context.RequestAborted);
+
+    return Results.Ok();
 });
 
 var startLock = new KeyedAsyncLock();
@@ -253,12 +321,17 @@ static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCac
     var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
     var topic = topics[Random.Shared.Next(topics.Length)];
     var topicInfo = string.Join(Environment.NewLine, [
-        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = topic }, token),
-        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = topic }, token),
+        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = $"\"{topic}\" \"{game.Theme}\"" }, token),
+        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = $"intitle:\"{topic}\" deepcat:\"{game.Theme}\"" }, token),
         ]);
     var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray();
     var round = new Round(topic, topicInfo, liars, [], []);
-    await cache.Update<Game>($"game/room/{game.Id}", g => g with { CurrentScene = GameScene.QuestionAnswering, Rounds = [.. g.Rounds, round] }, token);
+    await cache.Update<Game>($"game/room/{game.Id}", g => g with
+    {
+        Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.QuestionAnswering })],
+        CurrentScene = GameScene.QuestionAnswering,
+        Rounds = [.. g.Rounds, round]
+    }, token);
 }
 
 // 質問と回答
@@ -303,9 +376,12 @@ api.MapPost("/question", async (HttpContext context, [FromServices] IBufferDistr
     questionPrompt.AddExecutionSettings(geminiSettings);
     var questionFunc = kernel.CreateFunctionFromPrompt(questionPrompt);
     kernel.ImportPluginFromFunctions("question", [questionFunc]);
-    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme, geminiSettings);
     var prompt = new PromptTemplateConfig("""
         次の参考情報を基にして、ユーザーの質問に回答してください。
+
+        ## テーマ
+        {{$theme}}
 
         ## 対象
         {{$topic}}
@@ -339,7 +415,7 @@ api.MapPost("/question", async (HttpContext context, [FromServices] IBufferDistr
     prompt.AddExecutionSettings(geminiSettings);
     var result = await kernel.InvokeAsync(
         kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords });
+        new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords, ["theme"] = game.Theme });
 
     var res = result.GetFromJson<QuestionResponse>();
     await cache.Update<Game>(
@@ -373,12 +449,16 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
                 var player = g.Players.First(p => p.Id == user.Id);
                 player.Points += g.Config.CorrectPoint;
                 g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty));
-                return g with { CurrentScene = GameScene.LiarGuess };
+                return g with
+                {
+                    Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
+                    CurrentScene = GameScene.LiarGuess,
+                };
             },
             context.RequestAborted);
         return AnswerResultType.Correct;
     }
-    var keywords = await kernel.GetRelationKeywords(round.Topic, input, geminiSettings);
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme, geminiSettings);
     var prompt = new PromptTemplateConfig("""
         あなたはお題を当てるクイズの出題者であり、ユーザーの解答に対してお題と一致するかを判断する専門家です。
         参考情報を基にして、ユーザーの解答がお題と比較して直接的に同一存在かどうかを判断してください。
@@ -431,7 +511,11 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
             {
                 var player = g.Players.First(p => p.Id == user.Id);
                 player.Points += g.Config.CorrectPoint;
-                return g with { CurrentScene = GameScene.LiarGuess };
+                return g with
+                {
+                    Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
+                    CurrentScene = GameScene.LiarGuess,
+                };
             },
             context.RequestAborted);
         return AnswerResultType.Correct;
@@ -496,11 +580,14 @@ api.MapGet("/scene", async (HttpContext context, [FromServices] IBufferDistribut
         : Results.Ok(new CurrentScene(
             game.Id,
             game.Aikotoba,
+            game.Theme,
             game.CurrentScene,
             game.Rounds.Count,
             game.Players.ToArray(),
             game.CurrentScene switch
             {
+                GameScene.RegisterTopic
+                    => new EmptySceneInfo(),
                 GameScene.WaitRoundStart
                     => new WaitRoundSceneInfo(
                         game.Players.Where(p => p.CurrentScene == game.CurrentScene).Count()),
@@ -608,14 +695,19 @@ app.MapDefaultEndpoints();
 app.MapFallbackToFile("/index.html");
 app.Run();
 
-record RegistRequest(string Name, string Topic, string Aikotoba);
+// ルーム作成リクエスト
+record CreateRoomRequest(string Name, string Aikotoba, string Theme);
+
+// ルーム参加リクエスト
+record JoinRoomRequest(string Name, string Aikotoba);
 
 record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, GoogleSearchParam GoogleSearch);
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
-record CurrentScene(string Id, string Aikotoba, GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
+record CurrentScene(string Id, string Aikotoba, string Theme, GameScene Scene, int Round, Player[] Players, ISceneInfo Info);
 
+[JsonDerivedType(typeof(EmptySceneInfo))]
 [JsonDerivedType(typeof(WaitRoundSceneInfo))]
 [JsonDerivedType(typeof(TopicSelectingSceneInfo))]
 [JsonDerivedType(typeof(QuestionAnsweringSceneInfo))]
@@ -631,6 +723,7 @@ record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, LiarGuess[] 
 record RoundSummaryInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarCorrectPlayers) : ISceneInfo;
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
+record EmptySceneInfo() : ISceneInfo;
 
 static class Extensions
 {
@@ -643,10 +736,13 @@ static class Extensions
         }
     };
 
-    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, PromptExecutionSettings settings)
+    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, string theme, PromptExecutionSettings settings)
     {
         var ptompt = new PromptTemplateConfig("""
         対象の2つの単語、文章の関係性を検索エンジンで調査するためのキーワードを生成してください。
+
+        ## テーマ
+        {{$theme}}
 
         ## 対象
         * {{$correct}}
@@ -665,11 +761,11 @@ static class Extensions
         """)
         {
             Name = "keywords",
-            InputVariables = [new() { Name = "correct" }, new() { Name = "target" }],
+            InputVariables = [new() { Name = "correct" }, new() { Name = "target" }, new() { Name = "theme" }],
         };
         ptompt.AddExecutionSettings(settings);
         var keywordsFunc = kernel.CreateFunctionFromPrompt(ptompt);
-        return await keywordsFunc.InvokeAsync<string>(kernel, new() { ["correct"] = correct, ["target"] = target }) ?? string.Empty;
+        return await keywordsFunc.InvokeAsync<string>(kernel, new() { ["correct"] = correct, ["target"] = target, ["theme"] = theme }) ?? string.Empty;
     }
 
     public static T GetFromJson<T>(this FunctionResult result)

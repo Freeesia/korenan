@@ -40,6 +40,7 @@ export type AnswerResultType = (typeof AnswerResultType)[number];
 export interface CurrentScene {
   id: string;
   aikotoba: string;
+  theme: string;
   scene: GameScene;
   round: number;
   players: Player[];
@@ -100,7 +101,9 @@ export interface GameEndInfo {
 }
 
 export const GameScene = [
+  "RegisterTopic",
   "WaitRoundStart",
+  "TopicSelecting",
   "QuestionAnswering",
   "LiarGuess",
   "RoundSummary",

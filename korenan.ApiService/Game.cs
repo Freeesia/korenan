@@ -8,6 +8,7 @@ namespace Korenan.ApiService;
 /// </summary>
 /// <param name="Id">ゲームID</param>
 /// <param name="Aikotoba">合言葉</param>
+/// <param name="Theme">テーマ</param>
 /// <param name="Players">参加プレイヤー</param>
 /// <param name="Topics">お題</param>
 /// <param name="Rounds">ラウンド</param>
@@ -17,14 +18,20 @@ namespace Korenan.ApiService;
 public record Game(
     [property: Key(0)] string Id,
     [property: Key(1)] string Aikotoba,
-    [property: Key(2)] List<Player> Players,
-    [property: Key(3)] Dictionary<Guid, string> Topics,
-    [property: Key(4)] List<Round> Rounds,
-    [property: Key(5)] GameScene CurrentScene,
-    [property: Key(6)] Config Config);
+    [property: Key(2)] string Theme,
+    [property: Key(3)] List<Player> Players,
+    [property: Key(4)] Dictionary<Guid, string> Topics,
+    [property: Key(5)] List<Round> Rounds,
+    [property: Key(6)] GameScene CurrentScene,
+    [property: Key(7)] Config Config);
 
 public enum GameScene
 {
+    /// <summary>
+    /// お題登録フェーズ
+    /// </summary>
+    RegisterTopic,
+
     /// <summary>
     /// ラウンド開始を待つフェーズ
     /// </summary>
