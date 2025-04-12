@@ -510,10 +510,19 @@ api.MapPost("/guess", async (HttpContext context, [FromServices] IBufferDistribu
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
+    
+    // 自分自身を指摘することはできない
+    if (user.Id == target)
+    {
+        return Results.BadRequest("自分自身をライアーとして指摘することはできません。");
+    }
+    
     var round = game.Rounds.Last();
     round.LiarGuesses.Add(new(user.Id, target));
     await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
     await NextScene(cache, game, kernel, context.RequestAborted);
+    
+    return Results.Ok();
 });
 
 // プレイヤーのバン

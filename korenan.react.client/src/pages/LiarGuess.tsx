@@ -94,11 +94,13 @@ function LiarGuess() {
         <p>お題を考えた「ライアープレイヤー」は誰かな？</p>
         <select value={guess} onChange={(e) => setGuess(e.target.value)} disabled={guessed}>
           <option value="">プレイヤーを選択</option>
-          {scene?.players.map((player) => (
-            <option key={player.id} value={player.id}>
-              {player.name}
-            </option>
-          ))}
+          {scene?.players
+            .filter(player => player.id !== user?.id) // 自分自身を除外
+            .map((player) => (
+              <option key={player.id} value={player.id}>
+                {player.name}
+              </option>
+            ))}
         </select>
         <button onClick={guessLiar} disabled={guessed || !guess}>
           ライアー！
