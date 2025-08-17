@@ -5,11 +5,11 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
 	"features": {
-		"ghcr.io/nikiforovall/devcontainer-features/dotnet-aspire:1": {}
-	}
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+		"ghcr.io/nikiforovall/devcontainer-features/dotnet-aspire:1": {},
+		"ghcr.io/devcontainers/features/node:1": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+        "ghcr.io/devcontainers/features/powershell:1": {}
+	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [5000, 5001],
@@ -21,6 +21,8 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "dotnet restore",
+    "onCreateCommand": "curl -sSL https://aspire.dev/install.sh | bash",
+    "postStartCommand": "dotnet dev-certs https --trust"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
