@@ -49,4 +49,8 @@ public class GoogleSearchConnector : IWebSearchEngineConnector
     }
 }
 
-public record GoogleSearchParam(string ApiKey, string Cx);
+public record GoogleSearchParam()
+{
+    public required string ApiKey { get; init; }
+    public required string Cx { get; init; }
+}

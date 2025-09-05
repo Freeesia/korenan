@@ -10,7 +10,6 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
-using Microsoft.SemanticKernel.Plugins.Web.Bing;
 using GoogleTrends = GoogleTrendsApi.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,8 +33,8 @@ builder.Services.AddHttpClient(string.Empty, b =>
 
 builder.Services
     .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
-    .AddSingleton<IWebSearchEngineConnector>(sp => new BingConnector(bingKey, sp.GetRequiredService<HttpClient>(), loggerFactory: sp.GetService<ILoggerFactory>()))
-    //.AddSingleton<IWebSearchEngineConnector>(sp => new GoogleSearchConnector(googleKey, sp.GetRequiredService<ILogger<GoogleSearchConnector>>()))
+    .Configure<GoogleSearchParam>(builder.Configuration.GetSection("SemanticKernelOptions:GoogleSearch"))
+    .AddSingleton<IWebSearchEngineConnector, GoogleSearchConnector>()
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WebSearchEnginePlugin>("search", sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
@@ -513,18 +512,18 @@ api.MapPost("/guess", async (HttpContext context, [FromServices] IBufferDistribu
 {
     var user = context.Session.Get<User>(nameof(User)) ?? throw new InvalidOperationException("User not found.");
     var game = await GetGameFromUser(user, cache, context.RequestAborted) ?? throw new InvalidOperationException("Game not found.");
-    
+
     // 自分自身を指摘することはできない
     if (user.Id == target)
     {
         return Results.BadRequest("自分自身をライアーとして指摘することはできません。");
     }
-    
+
     var round = game.Rounds.Last();
     round.LiarGuesses.Add(new(user.Id, target));
     await cache.Set($"game/room/{game.Id}", game, context.RequestAborted);
     await NextScene(cache, game, kernel, context.RequestAborted);
-    
+
     return Results.Ok();
 });
 
