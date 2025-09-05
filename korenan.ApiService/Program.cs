@@ -27,9 +27,12 @@ var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIEmbeddingGeneration(modelId, apiKey);
 
 builder.AddRedisDistributedCache("cache");
+builder.Services.AddHttpClient(string.Empty, b =>
+    {
+        b.DefaultRequestHeaders.UserAgent.ParseAdd("korenan/1.0");
+    });
 
 builder.Services
-    .AddHttpClient()
     .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
     .AddSingleton<IWebSearchEngineConnector>(sp => new BingConnector(bingKey, sp.GetRequiredService<HttpClient>(), loggerFactory: sp.GetService<ILoggerFactory>()))
     //.AddSingleton<IWebSearchEngineConnector>(sp => new GoogleSearchConnector(googleKey, sp.GetRequiredService<ILogger<GoogleSearchConnector>>()))
