@@ -20,10 +20,10 @@ builder.AddServiceDefaults();
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
-var (modelId, apiKey, bingKey, _) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
+var (modelId, apiKey, _) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
 var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
-    .AddGoogleAIEmbeddingGeneration(modelId, apiKey);
+    .AddGoogleAIEmbeddingGenerator(modelId, apiKey);
 
 builder.AddRedisDistributedCache("cache");
 builder.Services.AddHttpClient(string.Empty, b =>
@@ -682,7 +682,7 @@ record CreateRoomRequest(string Name, string Aikotoba, string Theme);
 // ルーム参加リクエスト
 record JoinRoomRequest(string Name, string Aikotoba);
 
-record SemanticKernelOptions(string ModelId, string ApiKey, string BingKey, GoogleSearchParam GoogleSearch);
+record SemanticKernelOptions(string ModelId, string ApiKey, GoogleSearchParam GoogleSearch);
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
