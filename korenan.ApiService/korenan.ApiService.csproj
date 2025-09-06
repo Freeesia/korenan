@@ -32,7 +32,6 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
     <PackageReference Include="CXuesong.MW.MwParserFromScratch" Version="0.2.1" />
     <PackageReference Include="Genbox.Wikipedia" Version="4.0.0" />
-    <PackageReference Include="Google.Apis.CustomSearchAPI.v1" Version="1.68.0.3520" />
     <PackageReference Include="GoogleTrendsApi" Version="2.3.5" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.64.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.64.0-preview" />
