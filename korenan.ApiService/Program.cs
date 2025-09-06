@@ -19,7 +19,7 @@ builder.Services.AddHostedService<BotService>();
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
-var (modelId, apiKey, _) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
+var (modelId, apiKey) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
 var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
     .AddGoogleAIEmbeddingGenerator(modelId, apiKey);
@@ -33,15 +33,7 @@ builder.Services.AddHttpClient(string.Empty, b =>
 
 builder.Services
     .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
-    .Configure<TavilySearchParam>(builder.Configuration.GetSection("SemanticKernelOptions:TavilySearch"))
-    .AddSingleton<IWebSearchEngineConnector>(sp =>
-    {
-        var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-        var httpClient = httpClientFactory.CreateClient();
-        var options = sp.GetRequiredService<IOptions<TavilySearchParam>>();
-        var logger = sp.GetRequiredService<ILogger<TavilySearchConnector>>();
-        return new TavilySearchConnector(options, httpClient, logger);
-    })
+    .AddTavilyTextSearch(builder.Configuration.GetSection("SemanticKernelOptions:TavilySearch:ApiKey").Value ?? throw new InvalidOperationException("TavilySearch API key is not configured"))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WebSearchEnginePlugin>("search", sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
@@ -571,7 +563,7 @@ record CreateRoomRequest(string Name, string Aikotoba, string Theme);
 // ルーム参加リクエスト
 record JoinRoomRequest(string Name, string Aikotoba);
 
-record SemanticKernelOptions(string ModelId, string ApiKey, TavilySearchParam TavilySearch);
+record SemanticKernelOptions(string ModelId, string ApiKey);
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
