@@ -105,8 +105,9 @@ public record LiarGuess([property: Key(0)] Guid Player, [property: Key(1)] Guid 
 /// <param name="Result">質問もしくは解答の結果</param>
 /// <param name="Reason">結果の判定理由</param>
 /// <param name="Prompt">判定に利用したプロンプト</param>
+/// <param name="PostedAt">投稿時間</param>
 [MessagePackObject]
-public record HistoryInfo([property: Key(0)] IPlayerResult Result, [property: Key(1)] string Reason, [property: Key(2)] string Prompt);
+public record HistoryInfo([property: Key(0)] IPlayerResult Result, [property: Key(1)] string Reason, [property: Key(2)] string Prompt, [property: Key(3)] DateTime PostedAt);
 
 /// <summary>
 /// プレイヤー行動の結果タイプ
@@ -220,8 +221,9 @@ public enum AnswerResultType
 /// <param name="CorrectPoint">正解時のポイント</param>
 /// <param name="LiarPoint">ライアープレイヤーを当てたときのポイント</param>
 /// <param name="NoCorrectPoint">正解者がいなかったときのポイント</param>
+/// <param name="InactivityThresholdMinutes">AI自動質問の非活動閾値（分）</param>
 [MessagePackObject]
-public record Config([property: Key(0)] int QuestionLimit = 10, [property: Key(1)] int AnswerLimit = 5, [property: Key(2)] int CorrectPoint = 20, [property: Key(3)] int LiarPoint = 30, [property: Key(4)] int NoCorrectPoint = -10);
+public record Config([property: Key(0)] int QuestionLimit = 10, [property: Key(1)] int AnswerLimit = 5, [property: Key(2)] int CorrectPoint = 20, [property: Key(3)] int LiarPoint = 30, [property: Key(4)] int NoCorrectPoint = -10, [property: Key(5)] int InactivityThresholdMinutes = 1);
 
 static class GameExtensions
 {

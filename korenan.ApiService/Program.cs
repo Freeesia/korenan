@@ -1,5 +1,3 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using CommunityToolkit.HighPerformance;
 using GoogleTrendsApi;
@@ -7,7 +5,6 @@ using Korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
 using GoogleTrends = GoogleTrendsApi.Api;
@@ -16,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire components.
 builder.AddServiceDefaults();
+builder.Services.AddHostedService<BotService>();
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
@@ -24,6 +22,7 @@ var (modelId, apiKey, _) = builder.Configuration.GetSection(nameof(SemanticKerne
 var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
     .AddGoogleAIEmbeddingGenerator(modelId, apiKey);
+kernelBuikder.Plugins.AddFromFunctions();
 
 builder.AddRedisDistributedCache("cache");
 builder.Services.AddHttpClient(string.Empty, b =>
@@ -58,16 +57,6 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseSession();
-
-var geminiSettings = new GeminiPromptExecutionSettings()
-{
-    SafetySettings =
-    [
-        new(GeminiSafetyCategory.Harassment, GeminiSafetyThreshold.BlockNone),
-        new(GeminiSafetyCategory.DangerousContent, GeminiSafetyThreshold.BlockNone),
-        new(new("HARM_CATEGORY_HATE_SPEECH"), GeminiSafetyThreshold.BlockNone),
-    ],
-};
 
 var api = app.MapGroup("/api");
 
@@ -328,82 +317,11 @@ api.MapPost("/question", async (HttpContext context, [FromServices] IBufferDistr
         throw new InvalidOperationException("You have reached the answer limit.");
     }
     var player = game.Players.First(p => p.Id == user.Id);
-    var questionPrompt = new PromptTemplateConfig("""
-        あなたは文章の校正を行うアシスタントです。
-        与えられた対象と質問をつなげて、対象に対する質問文を作成してください。
-
-        ## 対象
-        {{$target}}
-
-        ## 質問
-        {{$input}}
-
-        ### 例
-        * 対象: 「東京」
-        * 質問: 「首都ですか？」
-        * 出力: 「東京は首都ですか？」
-
-        * 対象: 「犬」
-        * 質問: 「生き物？」
-        * 出力: 「犬は生き物ですか？」
-
-        * 対象: 「日本」
-        * 質問: 「それは生き物ですか」
-        * 出力: 「日本は生き物ですか？」
-        """)
-    {
-        Name = "question",
-        Description = "「対象」と「質問」から対象に対する質問文を生成する",
-        InputVariables = [new() { Name = "input", IsRequired = true, Description = "質問" }, new() { Name = "target", IsRequired = true, Description = "対象" }],
-    };
-    questionPrompt.AddExecutionSettings(geminiSettings);
-    var questionFunc = kernel.CreateFunctionFromPrompt(questionPrompt);
-    kernel.ImportPluginFromFunctions("question", [questionFunc]);
-    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme, geminiSettings);
-    var prompt = new PromptTemplateConfig("""
-        次の参考情報を基にして、ユーザーの質問に回答してください。
-
-        ## テーマ
-        {{$theme}}
-
-        ## 対象
-        {{$topic}}
-
-        ## 参考情報
-        {{ $topicInfo }}
-        {{ search $keywords }}
-
-        ## ユーザーの質問
-        {{ question intput=$intput target=$topic }}
-
-        ## 回答の指針
-        * 参考情報内に、質問に対して明確に肯定される内容があれば`yes`と回答してください。
-        * 参考情報内に、質問に対して明確に否定される内容があれば`no`と回答してください。
-        * 参考情報内に、質問に回答可能な情報が含まれていない場合は`no`と回答してください。
-        * 対象がキャラクターかどうかをまず判断し、キャラクターの場合は、そのキャラクターに対する質問として回答してください。
-          * 例: 対象が「ドラえもん」の場合、「ドラえもんは猫ですか？」と質問された場合は`no`と回答してください。
-          * 例: 対象が「ドラえもん」の場合、「ドラえもんは猫型ロボットですか？」と質問された場合は`yes`と回答してください。
-          * 例: 対象が「野比のび太」の場合、「野比のび太は人ですか？」と質問された場合は`yes`と回答してください。
-          * 例: 対象が「野比のび太」の場合、「野比のび太は犬ですか？」と質問された場合は`no`と回答してください。
-          * 例: 対象がバーチャルYouTuberの場合、「バーチャルYouTuberは人ですか？」と質問された場合は`yes`と回答してください。
-        * 質問が「はい」「いいえ」で回答できない開いた質問の場合は`unanswerable`と回答してください。
-
-        ## 出力の様式
-        以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
-        {
-            "reason": "判断の理由",
-            "result": "`yes`、`no`、`unanswerable`のいずれかの回答"
-        }
-        """);
-    prompt.AddExecutionSettings(geminiSettings);
-    var result = await kernel.InvokeAsync(
-        kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["topic"] = round.Topic, ["input"] = input, ["topicInfo"] = round.TopicInfo, ["keywords"] = keywords, ["theme"] = game.Theme });
-
-    var res = result.GetFromJson<QuestionResponse>();
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme);
+    var res = await kernel.GetAwnser(game.Theme, round, input, keywords);
     await cache.Update<Game>(
         $"game/room/{game.Id}",
-        g => g.Rounds.Last().Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty)),
+        g => g.Rounds.Last().Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, string.Empty, DateTime.UtcNow)),
         context.RequestAborted);
     return res.Result;
 });
@@ -431,7 +349,7 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
             {
                 var player = g.Players.First(p => p.Id == user.Id);
                 player.Points += g.Config.CorrectPoint;
-                g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty));
+                g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty, DateTime.UtcNow));
                 return g with
                 {
                     Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
@@ -441,50 +359,12 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
             context.RequestAborted);
         return AnswerResultType.Correct;
     }
-    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme, geminiSettings);
-    var prompt = new PromptTemplateConfig("""
-        あなたはお題を当てるクイズの出題者であり、ユーザーの解答に対してお題と一致するかを判断する専門家です。
-        参考情報を基にして、ユーザーの解答がお題と比較して直接的に同一存在かどうかを判断してください。
+    var keywords = await kernel.GetRelationKeywords(round.Topic, input, game.Theme);
+    var res = await kernel.IsAnswer(round, input, keywords);
 
-        ## お題
-        {{ $correct }}
-
-        ## ユーザーの解答
-        {{ $answer }}
-
-        ## お題に関する参考情報
-        {{ $correctInfo }}
-
-        ## 解答に関する参考情報
-        {{ search $answer }}
-        {{ wiki.Search $answer }}
-
-        ## お題と解答の関係性に関する参考情報
-        {{ search $keywords }}
-
-        ## 判断および出力の指針
-        1. 解答とお題が完全一致している場合は`correct`と出力してください。
-        2. 解答とお題が完全一致していないが、表記揺れなど参考情報を元に解答がお題と必要十分かつ直接的に同一存在であると判断できる場合は`correct`と出力してください。
-        3. 解答とお題が一致しないが、解答がお題の一部であり、解答がお題の十分条件を満たす場合は`correct`と出力してください。
-        4. 解答とお題が一致しないが、お題が解答の一部であり、解答がお題の必要条件を満たすが、十分条件を満たさない場合は`more_specific`と出力してください。
-        5. 上記のいずれにも当てはまらない場合は`incorrect`と出力してください。
-
-        ## 出力の様式
-        以下のJsonフォーマットにしたがって、判断を導き出した理由とともに判断結果を出力してください。
-        {
-            "reason": "判断の理由",
-            "result": "`correct`、`more_specific`、`incorrect`のいずれかの判断結果"
-        }
-        """);
-    prompt.AddExecutionSettings(geminiSettings);
-    var result = await kernel.InvokeAsync(
-        kernel.CreateFunctionFromPrompt(prompt),
-        new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
-
-    var res = result.GetFromJson<AnswerResponse>();
     game = await cache.Update<Game>(
         $"game/room/{game.Id}",
-        g => g.Rounds.Last().Histories.Add(new(new AnswerResult(user.Id, input, res.Result), res.Reason, result.RenderedPrompt ?? string.Empty)),
+        g => g.Rounds.Last().Histories.Add(new(new AnswerResult(user.Id, input, res.Result), res.Reason, string.Empty, DateTime.UtcNow)),
         context.RequestAborted);
     if (res.Result == AnswerResultType.Correct)
     {
@@ -703,57 +583,3 @@ record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] Guess
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 record EmptySceneInfo() : ISceneInfo;
-
-static class Extensions
-{
-    private static readonly JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        Converters =
-        {
-            new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower),
-        }
-    };
-
-    public static async Task<string> GetRelationKeywords(this Kernel kernel, string correct, string target, string theme, PromptExecutionSettings settings)
-    {
-        var ptompt = new PromptTemplateConfig("""
-        対象の2つの単語、文章の関係性を検索エンジンで調査するためのキーワードを生成してください。
-
-        ## テーマ
-        {{$theme}}
-
-        ## 対象
-        * {{$correct}}
-        * {{$target}}
-
-        ### 例
-        * 対象: 「東京」「首都ですか？」
-        * キーワード: 「東京 首都 かどうか」
-        * 対象: 「犬」「生き物？」
-        * キーワード: 「犬 生き物 かどうか」
-        * 対象: 「日本」「生き物」
-        * キーワード: 「日本 生き物 かどうか」
-
-        キーワードはスペース区切りで質問に対する回答を得ることができるような検索エンジンへ渡す情報を出力してください。
-        キーワード以外の情報は出力しないでください。
-        """)
-        {
-            Name = "keywords",
-            InputVariables = [new() { Name = "correct" }, new() { Name = "target" }, new() { Name = "theme" }],
-        };
-        ptompt.AddExecutionSettings(settings);
-        var keywordsFunc = kernel.CreateFunctionFromPrompt(ptompt);
-        return await keywordsFunc.InvokeAsync<string>(kernel, new() { ["correct"] = correct, ["target"] = target, ["theme"] = theme }) ?? string.Empty;
-    }
-
-    public static T GetFromJson<T>(this FunctionResult result)
-    {
-        var json = result.GetValue<string>()!.Trim('`', '\n');
-        if (!json.StartsWith('{'))
-        {
-            json = json[json.IndexOf('{')..];
-        }
-        return JsonSerializer.Deserialize<T>(json, jsonOptions)!;
-    }
-}
