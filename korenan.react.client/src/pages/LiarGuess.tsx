@@ -58,7 +58,7 @@ function LiarGuess() {
     const histories = sceneInfo()?.histories || [];
 
     return (
-      <table>
+      <table className="history">
         <tbody>
           {histories.flatMap((history, index) => {
             const result = history.result;
