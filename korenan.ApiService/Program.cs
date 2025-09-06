@@ -479,7 +479,8 @@ api.MapGet("/scene", async (HttpContext context, [FromServices] IBufferDistribut
                             .Where(h => h.Result == AnswerResultType.Correct)
                             .Select(h => h.Player)
                             .ToArray(),
-                        [.. game.Rounds.Last().LiarGuesses.Select(g => g.Player)]),
+                        [.. game.Rounds.Last().LiarGuesses.Select(g => g.Player)],
+                        [.. game.Rounds.Last().Histories]),
                 GameScene.GameEnd
                     => new GameEndInfo(
                         game.Rounds.Select(r =>
@@ -580,7 +581,7 @@ interface ISceneInfo;
 record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
 record TopicSelectingSceneInfo() : ISceneInfo;
 record QuestionAnsweringSceneInfo(IPlayerResult[] Histories) : ISceneInfo;
-record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] GuessedPlayers) : ISceneInfo;
+record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] GuessedPlayers, HistoryInfo[] Histories) : ISceneInfo;
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 record EmptySceneInfo() : ISceneInfo;

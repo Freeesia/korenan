@@ -1,6 +1,7 @@
+import "./LiarGuess.css";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { SceneContext, UserContext, TitleContext } from "../App";
-import { LiarGuessSceneInfo } from "../models";
+import { LiarGuessSceneInfo, QuestionResult, AnswerResult } from "../models";
 
 function LiarGuess() {
   const [scene] = useContext(SceneContext);
@@ -53,6 +54,46 @@ function LiarGuess() {
 
   const getPlayerName = (id: string) => scene?.players.find((p) => p.id === id)?.name || id;
 
+  const renderHistory = () => {
+    const histories = sceneInfo()?.histories || [];
+
+    return (
+      <table>
+        <tbody>
+          {histories.flatMap((history, index) => {
+            const result = history.result;
+            if (result.type === "Question") {
+              const questionResult = result as QuestionResult;
+              return [
+                (<tr key={index}>
+                  <td>❓</td>
+                  <td>{questionResult.question}</td>
+                  <td>{questionResult.result === "Yes" ? "⭕" : questionResult.result === "No" ? "❌" : "㊙️"}</td>
+                </tr>),
+                (<tr key={index + "-r"} className="reason">
+                  <td colSpan={3}>{history.reason}</td>
+                </tr>)
+              ];
+            } else if (result.type === "Answer") {
+              const answerResult = result as AnswerResult;
+              return [(
+                <tr key={index}>
+                  <td>🚀</td>
+                  <td>{answerResult.answer}</td>
+                  <td>{answerResult.result === "Correct" ? "🥳" : answerResult.result === "MoreSpecific" ? "🤔" : "😫"} </td>
+                </tr>),
+                (<tr key={index + "-r"} className="reason">
+                  <td colSpan={3}>{history.reason}</td>
+                </tr>
+              )];
+            }
+            return null;
+          })}
+        </tbody>
+      </table>
+    );
+  };
+
   useEffect(() => {
     if (sceneInfo()?.guessedPlayers.includes(user?.id || "")) {
       setGuessed(true);
@@ -69,6 +110,10 @@ function LiarGuess() {
             <li key={index}>{getPlayerName(player)}</li>
           ))}
         </ul>
+      </div>
+      <div>
+        <h2>このラウンドの履歴:</h2>
+        <div>{renderHistory()}</div>
       </div>
       <div>
         <h2>推測結果:</h2>
@@ -95,7 +140,7 @@ function LiarGuess() {
         <select value={guess} onChange={(e) => setGuess(e.target.value)} disabled={guessed}>
           <option value="">プレイヤーを選択</option>
           {scene?.players
-            .filter(player => player.id !== user?.id) // 自分自身を除外
+            .filter((player) => player.id !== user?.id) // 自分自身を除外
             .map((player) => (
               <option key={player.id} value={player.id}>
                 {player.name}

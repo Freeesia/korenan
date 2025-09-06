@@ -1,0 +1,9 @@
+
+tr.reason {
+	font-size: small;
+  color: lightgray;
+
+	td {
+		padding-bottom: 1rem;
+	}
+}

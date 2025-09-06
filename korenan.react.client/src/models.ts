@@ -71,10 +71,17 @@ export interface QuestionAnsweringSceneInfo {
   histories: IPlayerResult[];
 }
 
+export interface HistoryInfo {
+  result: IPlayerResult;
+  reason: string;
+  postedAt: string;
+}
+
 export interface LiarGuessSceneInfo {
   topic: string;
   topicCorrectPlayers: string[];
   guessedPlayers: string[];
+  histories: HistoryInfo[];
 }
 
 export interface LiarGuess {
