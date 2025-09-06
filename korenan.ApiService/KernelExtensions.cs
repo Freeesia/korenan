@@ -14,7 +14,8 @@ static class KernelExtensions
             CreateGetRelationKeywords(),
             CreateGetAnswer(),
             CreateGenQuestion(),
-            CreateIsAnswer()
+            CreateIsAnswer(),
+            CreateSummary(),
         ]);
         return builder;
     }
@@ -220,6 +221,36 @@ static class KernelExtensions
         return KernelFunctionFactory.CreateFromPrompt(prompt);
     }
 
+    private static KernelFunction CreateSummary()
+    {
+        var prompt = new PromptTemplateConfig("""
+        あなたは情報の整理を行うアシスタントです。
+        入力されたテーマのお題に関する情報を整理してまとめてください。
+
+        ## テーマ
+        {{$theme}}
+
+        ## お題
+        {{$topic}}
+
+        ## お題に関する情報
+        {{$topicInfo}}
+
+        ## 出力
+        整理した情報のみを出力してください。
+        """)
+        {
+            Name = "summary",
+            Description = "情報整理",
+            InputVariables = [
+                new() { Name = "theme", IsRequired = true, Description = "テーマ" },
+                new() { Name = "topic", IsRequired = true, Description = "お題" },
+                new() { Name = "topicInfo", IsRequired = true, Description = "お題に関する情報" },
+            ],
+        };
+        return KernelFunctionFactory.CreateFromPrompt(prompt);
+    }
+
     public static async Task<string> ConcatQuestion(this Kernel kernel, string target, string question)
         => await kernel.InvokeAsync<string>("korenan", "question", new() { ["target"] = target, ["input"] = question }) ?? string.Empty;
 
@@ -254,6 +285,9 @@ static class KernelExtensions
         var result = await kernel.InvokeAsync("korenan", "is_answer", new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
         return result.GetFromJson<AnswerResponse>();
     }
+
+    public static async Task<string> Summary(this Kernel kernel, string theme, string topic, string topicInfo)
+        => await kernel.InvokeAsync<string>("korenan", "summary", new() { ["theme"] = theme, ["topic"] = topic, ["topicInfo"] = topicInfo }) ?? string.Empty;
 
     private static readonly JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web)
     {

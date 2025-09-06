@@ -296,6 +296,7 @@ static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCac
         await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = $"\"{topic}\" \"{game.Theme}\"" }, token),
         await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = $"intitle:\"{topic}\" deepcat:\"{game.Theme}\"" }, token),
         ]);
+    topicInfo = await kernel.Summary(game.Theme, topic, topicInfo);
     var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray();
     var round = new Round(topic, topicInfo, liars, [], []);
     await cache.Update<Game>($"game/room/{game.Id}", g => g with

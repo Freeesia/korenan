@@ -44,19 +44,21 @@ public sealed class WikipediaPlugin(HttpClient httpClient)
         var parser = new WikitextParser();
         var doc = parser.Parse(parseRes.WikiText, cancellationToken);
 
-        var sec = result.SectionTitle ?? parseRes.Redirects.FirstOrDefault()?.ToFragment;
-        if (!string.IsNullOrEmpty(sec))
-        {
-            var secNode = doc.Lines.OfType<Heading>().FirstOrDefault(h => h.ToPlainText() == sec);
-            var sectionText = new StringBuilder();
-            var node = secNode?.NextNode;
-            while (node is not Heading and not null)
-            {
-                sectionText.AppendLine(node.ToPlainText(NodePlainTextOptions.RemoveRefTags));
-                node = node.NextNode;
-            }
-            return sectionText.ToString();
-        }
+        // セクション指定はなくしてみる
+        // お題が「PS4」だった時に、「いつも使うPS4」の項目しか取れなかった...
+        // var sec = result.SectionTitle ?? parseRes.Redirects.FirstOrDefault()?.ToFragment;
+        // if (!string.IsNullOrEmpty(sec))
+        // {
+        //     var secNode = doc.Lines.OfType<Heading>().FirstOrDefault(h => h.ToPlainText() == sec);
+        //     var sectionText = new StringBuilder();
+        //     var node = secNode?.NextNode;
+        //     while (node is not Heading and not null)
+        //     {
+        //         sectionText.AppendLine(node.ToPlainText(NodePlainTextOptions.RemoveRefTags));
+        //         node = node.NextNode;
+        //     }
+        //     return sectionText.ToString();
+        // }
 
         // 関連項目、脚注以降はあまり重要ではない情報なので削る
         Node? delete = doc.Lines.OfType<Heading>().FirstOrDefault(h => h.ToPlainText() is "関連項目" or "脚注");
