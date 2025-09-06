@@ -73,19 +73,36 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
 
     private async Task GenerateAndPostQuestionAsync(Game game, Round round, CancellationToken cancellationToken)
     {
-        var aiCount = round.Histories
-            .Where(h => h.Result.Player == Guid.Empty)
+        var questions = round.Histories
+            .Select(h => h.Result)
+            .OfType<QuestionResult>()
+            .ToArray();
+        var maxQuestions = game.Config.QuestionLimit * game.Players.Count;
+        var playersCount = questions
+            .Where(h => h.Player != Guid.Empty)
+            .Count();
+        var aiCount = questions
+            .Where(h => h.Player == Guid.Empty)
             .Count();
 
+        // 後半戦に入るまではAIは質問しない
+        if (playersCount < maxQuestions * 0.5)
+        {
+            this.logger.LogInformation("Not enough player questions yet for game {GameId}, skipping AI question", game.Id);
+            return;
+        }
+
+        // Botの質問上限に達している場合はスキップ
         if (aiCount >= game.Config.QuestionLimit)
         {
             this.logger.LogInformation("AI has reached question limit for game {GameId}", game.Id);
             return;
         }
 
-        // AIによる質問生成
+        // Botによる質問生成
         var yesno = random.Next(2) == 0;
-        var propernoun = aiCount > game.Config.QuestionLimit / 2;
+        // Bot自身の後半の質問かつ全体の質問数の75%が埋まっている場合のみ固有名詞を含む質問を許可
+        var propernoun = aiCount > game.Config.QuestionLimit / 2 && playersCount > maxQuestions * 0.75;
         var generatedQuestion = await kernel.GenQuestion(game.Theme, round, yesno, propernoun);
 
         if (string.IsNullOrEmpty(generatedQuestion))
@@ -107,15 +124,11 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
         // 履歴に追加
         await cache.Update<Game>(
             $"game/room/{game.Id}",
-            g =>
-            {
-                g.Rounds.Last().Histories.Add(new(
+            g => g.Rounds.Last().Histories.Add(new(
                     new QuestionResult(Guid.Empty, generatedQuestion, response.Result),
                     response.Reason,
                     string.Empty,
-                    DateTime.UtcNow));
-                return g;
-            },
+                    DateTime.UtcNow)),
             cancellationToken);
         this.logger.LogInformation("Posted AI question for game {GameId}", game.Id);
     }
