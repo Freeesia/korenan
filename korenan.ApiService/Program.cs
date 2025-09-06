@@ -4,10 +4,10 @@ using GoogleTrendsApi;
 using Korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.Plugins.Core;
-using Microsoft.SemanticKernel.Plugins.Web;
+using Microsoft.SemanticKernel.Plugins.Web.Tavily;
 using GoogleTrends = GoogleTrendsApi.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +19,7 @@ builder.Services.AddHostedService<BotService>();
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
-var (modelId, apiKey) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
+var (modelId, apiKey, tavilyApiKey) = builder.Configuration.GetSection(nameof(SemanticKernelOptions)).Get<SemanticKernelOptions>()!;
 var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
     .AddGoogleAIEmbeddingGenerator(modelId, apiKey);
@@ -33,8 +33,8 @@ builder.Services.AddHttpClient(string.Empty, b =>
 
 builder.Services
     .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
-    .AddTavilyTextSearch(builder.Configuration.GetSection("SemanticKernelOptions:TavilySearch:ApiKey").Value ?? throw new InvalidOperationException("TavilySearch API key is not configured"))
-    .AddSingleton(sp => KernelPluginFactory.CreateFromType<WebSearchEnginePlugin>("search", sp))
+    .AddTavilyTextSearch(tavilyApiKey, new() { IncludeAnswer = true, SearchDepth = TavilySearchDepth.Advanced })
+    .AddSingleton(sp => sp.GetRequiredService<ITextSearch>().CreateWithSearch("search"))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
     .AddEndpointsApiExplorer()
@@ -293,7 +293,7 @@ static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCac
     var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
     var topic = topics[Random.Shared.Next(topics.Length)];
     var topicInfo = string.Join(Environment.NewLine, [
-        await kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = $"\"{topic}\" \"{game.Theme}\"" }, token),
+        .. await kernel.InvokeAsync<List<string>>("search", "Search", new() { ["query"] = $"{game.Theme}の{topic}の概要" }, token) ?? [],
         await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = $"intitle:\"{topic}\" deepcat:\"{game.Theme}\"" }, token),
         ]);
     topicInfo = await kernel.Summary(game.Theme, topic, topicInfo);
@@ -563,7 +563,7 @@ record CreateRoomRequest(string Name, string Aikotoba, string Theme);
 // ルーム参加リクエスト
 record JoinRoomRequest(string Name, string Aikotoba);
 
-record SemanticKernelOptions(string ModelId, string ApiKey);
+record SemanticKernelOptions(string ModelId, string ApiKey, string TavilyApiKey);
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
