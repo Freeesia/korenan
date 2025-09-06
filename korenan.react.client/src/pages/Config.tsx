@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Config } from "../models";
 
 function ConfigPage({ onClose }: { onClose: () => void }) {
-  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0, noCorrectPoint: 0 });
+  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0, noCorrectPoint: 0, inactivityThresholdMinutes: 0 });
 
   useEffect(() => {
     fetchConfig();
@@ -91,6 +91,19 @@ function ConfigPage({ onClose }: { onClose: () => void }) {
             value={config?.noCorrectPoint}
             onChange={(e) =>
               setConfig({ ...config!, noCorrectPoint: Number(e.target.value) })
+            }
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          botが反応するまでの非アクティブ時間(分):
+          <input
+            type="number"
+            disabled={!config}
+            value={config?.inactivityThresholdMinutes}
+            onChange={(e) =>
+              setConfig({ ...config!, inactivityThresholdMinutes: Number(e.target.value) })
             }
           />
         </label>

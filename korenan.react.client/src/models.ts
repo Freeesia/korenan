@@ -110,4 +110,5 @@ export interface Config {
   correctPoint: number;
   liarPoint: number;
   noCorrectPoint: number;
+  inactivityThresholdMinutes: number;
 }
