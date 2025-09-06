@@ -7,6 +7,44 @@ namespace Korenan.ApiService;
 
 static class KernelExtensions
 {
+    private static readonly string QuestionResponseJsonSchema = """
+    {
+        "type": "object",
+        "properties": {
+            "reason": {
+                "type": "string",
+                "description": "判断の理由"
+            },
+            "result": {
+                "type": "string",
+                "enum": ["yes", "no", "unanswerable"],
+                "description": "質問に対する回答"
+            }
+        },
+        "required": ["reason", "result"],
+        "additionalProperties": false
+    }
+    """;
+
+    private static readonly string AnswerResponseJsonSchema = """
+    {
+        "type": "object",
+        "properties": {
+            "reason": {
+                "type": "string",
+                "description": "判断の理由"
+            },
+            "result": {
+                "type": "string",
+                "enum": ["correct", "more_specific", "incorrect"],
+                "description": "解答の判定結果"
+            }
+        },
+        "required": ["reason", "result"],
+        "additionalProperties": false
+    }
+    """;
+
     public static IKernelBuilderPlugins AddFromFunctions(this IKernelBuilderPlugins builder)
     {
         builder.AddFromFunctions("korenan", [
@@ -119,17 +157,15 @@ static class KernelExtensions
           * 例: 対象が「野比のび太」の場合、「野比のび太は犬ですか？」と質問された場合は`no`と回答してください。
           * 例: 対象がバーチャルYouTuberの場合、「バーチャルYouTuberは人ですか？」と質問された場合は`yes`と回答してください。
         * 質問が「はい」「いいえ」で回答できない開いた質問の場合は`unanswerable`と回答してください。
-
-        ## 出力の様式
-        以下のJsonフォーマットにしたがって、質問に対して回答を導き出した理由とともに回答を出力してください。
-        {
-            "reason": "判断の理由",
-            "result": "`yes`、`no`、`unanswerable`のいずれかの回答"
-        }
         """)
         {
             Name = "answer",
             InputVariables = [new() { Name = "theme" }, new() { Name = "target" }, new() { Name = "targetInfo" }, new() { Name = "input" }, new() { Name = "keywords" }],
+            OutputVariable = new()
+            {
+                Description = "質問に対する回答",
+                JsonSchema = QuestionResponseJsonSchema
+            }
         };
         return KernelFunctionFactory.CreateFromPrompt(prompt);
     }
@@ -208,17 +244,15 @@ static class KernelExtensions
         3. 解答とお題が一致しないが、解答がお題の一部であり、解答がお題の十分条件を満たす場合は`correct`と出力してください。
         4. 解答とお題が一致しないが、お題が解答の一部であり、解答がお題の必要条件を満たすが、十分条件を満たさない場合は`more_specific`と出力してください。
         5. 上記のいずれにも当てはまらない場合は`incorrect`と出力してください。
-
-        ## 出力の様式
-        以下のJsonフォーマットにしたがって、判断を導き出した理由とともに判断結果を出力してください。
-        {
-            "reason": "判断の理由",
-            "result": "`correct`、`more_specific`、`incorrect`のいずれかの判断結果"
-        }
         """)
         {
             Name = "is_answer",
             InputVariables = [new() { Name = "correct" }, new() { Name = "answer" }, new() { Name = "correctInfo" }, new() { Name = "keywords" }],
+            OutputVariable = new()
+            {
+                Description = "解答の判定結果",
+                JsonSchema = AnswerResponseJsonSchema
+            }
         };
         return KernelFunctionFactory.CreateFromPrompt(prompt);
     }
@@ -262,7 +296,7 @@ static class KernelExtensions
     public static async Task<QuestionResponse> GetAwnser(this Kernel kernel, string theme, Round round, string input, string keywords)
     {
         var result = await kernel.InvokeAsync("korenan", "answer", new() { ["theme"] = theme, ["target"] = round.Topic, ["targetInfo"] = round.TopicInfo, ["input"] = input, ["keywords"] = keywords });
-        return result.GetFromJson<QuestionResponse>();
+        return result.GetValue<QuestionResponse>() ?? throw new InvalidOperationException("Failed to parse QuestionResponse");
     }
 
     public static async Task<string> GenQuestion(this Kernel kernel, string theme, Round round, bool yesno, bool propernoun)
@@ -285,7 +319,7 @@ static class KernelExtensions
     public static async Task<AnswerResponse> IsAnswer(this Kernel kernel, Round round, string input, string keywords)
     {
         var result = await kernel.InvokeAsync("korenan", "is_answer", new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
-        return result.GetFromJson<AnswerResponse>();
+        return result.GetValue<AnswerResponse>() ?? throw new InvalidOperationException("Failed to parse AnswerResponse");
     }
 
     public static async Task<string> Summary(this Kernel kernel, string theme, string topic, string topicInfo)
@@ -299,14 +333,4 @@ static class KernelExtensions
             new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower),
         }
     };
-
-    private static T GetFromJson<T>(this FunctionResult result)
-    {
-        var json = result.GetValue<string>()!.Trim('`', '\n');
-        if (!json.StartsWith('{'))
-        {
-            json = json[json.IndexOf('{')..];
-        }
-        return JsonSerializer.Deserialize<T>(json, jsonOptions)!;
-    }
 }
