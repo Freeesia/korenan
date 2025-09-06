@@ -127,7 +127,6 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
             g => g.Rounds.Last().Histories.Add(new(
                     new QuestionResult(Guid.Empty, generatedQuestion, response.Result),
                     response.Reason,
-                    string.Empty,
                     DateTime.UtcNow)),
             cancellationToken);
         this.logger.LogInformation("Posted AI question for game {GameId}", game.Id);

@@ -104,10 +104,9 @@ public record LiarGuess([property: Key(0)] Guid Player, [property: Key(1)] Guid 
 /// </summary>
 /// <param name="Result">質問もしくは解答の結果</param>
 /// <param name="Reason">結果の判定理由</param>
-/// <param name="Prompt">判定に利用したプロンプト</param>
 /// <param name="PostedAt">投稿時間</param>
 [MessagePackObject]
-public record HistoryInfo([property: Key(0)] IPlayerResult Result, [property: Key(1)] string Reason, [property: Key(2)] string Prompt, [property: Key(3)] DateTime PostedAt);
+public record HistoryInfo([property: Key(0)] IPlayerResult Result, [property: Key(1)] string Reason, [property: Key(2)] DateTime PostedAt);
 
 /// <summary>
 /// プレイヤー行動の結果タイプ

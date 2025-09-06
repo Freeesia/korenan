@@ -322,7 +322,7 @@ api.MapPost("/question", async (HttpContext context, [FromServices] IBufferDistr
     var res = await kernel.GetAwnser(game.Theme, round, input, keywords);
     await cache.Update<Game>(
         $"game/room/{game.Id}",
-        g => g.Rounds.Last().Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, string.Empty, DateTime.UtcNow)),
+        g => g.Rounds.Last().Histories.Add(new(new QuestionResult(player.Id, input, res.Result), res.Reason, DateTime.UtcNow)),
         context.RequestAborted);
     return res.Result;
 });
@@ -350,7 +350,7 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
             {
                 var player = g.Players.First(p => p.Id == user.Id);
                 player.Points += g.Config.CorrectPoint;
-                g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", string.Empty, DateTime.UtcNow));
+                g.Rounds.Last().Histories.Add(new(new AnswerResult(player.Id, input, AnswerResultType.Correct), "完全一致", DateTime.UtcNow));
                 return g with
                 {
                     Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.LiarGuess })],
@@ -365,7 +365,7 @@ api.MapPost("/answer", async (HttpContext context, [FromServices] IBufferDistrib
 
     game = await cache.Update<Game>(
         $"game/room/{game.Id}",
-        g => g.Rounds.Last().Histories.Add(new(new AnswerResult(user.Id, input, res.Result), res.Reason, string.Empty, DateTime.UtcNow)),
+        g => g.Rounds.Last().Histories.Add(new(new AnswerResult(user.Id, input, res.Result), res.Reason, DateTime.UtcNow)),
         context.RequestAborted);
     if (res.Result == AnswerResultType.Correct)
     {
