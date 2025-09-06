@@ -150,22 +150,28 @@ static class KernelExtensions
             ## 既存の質問履歴
             {{$existingQuestions}}
 
-            ## 指針
-            * 既存の質問と重複しない、新しい視点からの質問を考えて。
-            * 「はい」「いいえ」で明確に答えられる質問にして。
+            ## 作成する質問文の指針
+            * 既存の質問履歴と重複禁止。
+              * 新しい視点からの質問を考えて。
             * 対象の特徴や性質について探る質問を心がけて。
             * 質問文は自然で分かりやすい表現にして。
+            * 質問文にお題の文言を入れることは禁止。
+            * 質問文に固有名詞を入れることは{{$propernoun}}。
+            * 「{{$yesno}}」と答えられる質問にして。
 
             ## 出力
-            質問文のみを出力してください。「〜ですか？」の形式で終わるようにして。
-            質問文にお題が分かる直接的な文言を入れることは禁止。
+            質問文のみを出力して。
+            「この{{$topic}}は、～」の形式で始まり、「〜ですか？」の形式で終わるようにして。
             """)
         {
             Name = "generateQuestion",
             InputVariables = [
                 new() { Name = "theme", IsRequired = true },
+                new() { Name = "topic", IsRequired = true },
                 new() { Name = "topicInfo", IsRequired = true },
-                new() { Name = "existingQuestions", IsRequired = true }
+                new() { Name = "existingQuestions", IsRequired = true },
+                new() { Name = "yesno", IsRequired = true },
+                new() { Name = "propernoun", IsRequired = true }
             ]
         };
         return KernelFunctionFactory.CreateFromPrompt(prompt);
@@ -226,19 +232,21 @@ static class KernelExtensions
         return result.GetFromJson<QuestionResponse>();
     }
 
-    public static async Task<string> GenQuestion(this Kernel kernel, string theme, Round round)
+    public static async Task<string> GenQuestion(this Kernel kernel, string theme, Round round, bool yesno, bool propernoun)
         => await kernel.InvokeAsync<string>(
             "korenan",
             "generateQuestion",
-             new()
-             {
-                 ["theme"] = theme,
-                 ["topic"] = round.Topic,
-                 ["topicInfo"] = round.TopicInfo,
-                 ["existingQuestions"] = string.Join("\n", round.Histories
+            new()
+            {
+                ["theme"] = theme,
+                ["topic"] = round.Topic,
+                ["topicInfo"] = round.TopicInfo,
+                ["existingQuestions"] = string.Join("\n", round.Histories
                     .Select(h => h.Result)
                     .OfType<QuestionResult>()
-                    .Select(q => $"- {q.Question}"))
+                    .Select(q => $"- {q.Question}")),
+                ["yesno"] = yesno ? "はい" : "いいえ",
+                ["propernoun"] = propernoun ? "許容" : "禁止",
             }) ?? string.Empty;
 
     public static async Task<AnswerResponse> IsAnswer(this Kernel kernel, Round round, string input, string keywords)

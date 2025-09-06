@@ -12,6 +12,7 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
     private readonly IBufferDistributedCache cache = cache;
     private readonly IConnectionMultiplexer redis = redis;
     private readonly PeriodicTimer timer = new(TimeSpan.FromSeconds(10));
+    private readonly Random random = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -62,7 +63,6 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
                 // AIが質問を生成して投稿
                 await GenerateAndPostQuestionAsync(game, currentRound, cancellationToken);
 
-                this.logger.LogInformation("Posted AI question for game {GameId}", gameId);
             }
             catch (Exception ex)
             {
@@ -73,12 +73,30 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
 
     private async Task GenerateAndPostQuestionAsync(Game game, Round round, CancellationToken cancellationToken)
     {
+        var aiCount = round.Histories
+            .Where(h => h.Result.Player == Guid.Empty)
+            .Count();
+
+        if (aiCount >= game.Config.QuestionLimit)
+        {
+            this.logger.LogInformation("AI has reached question limit for game {GameId}", game.Id);
+            return;
+        }
+
         // AIによる質問生成
-        var generatedQuestion = await kernel.GenQuestion(game.Theme, round);
+        var yesno = random.Next(2) == 0;
+        var propernoun = aiCount > game.Config.QuestionLimit / 2;
+        var generatedQuestion = await kernel.GenQuestion(game.Theme, round, yesno, propernoun);
 
         if (string.IsNullOrEmpty(generatedQuestion))
         {
             this.logger.LogWarning("Failed to generate question for game {GameId}", game.Id);
+            return;
+        }
+
+        if (generatedQuestion.Contains(round.Topic, StringComparison.OrdinalIgnoreCase))
+        {
+            this.logger.LogInformation("Generated question is too revealing for game {GameId}, skipping", game.Id);
             return;
         }
 
@@ -99,5 +117,6 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
                 return g;
             },
             cancellationToken);
+        this.logger.LogInformation("Posted AI question for game {GameId}", game.Id);
     }
 }
