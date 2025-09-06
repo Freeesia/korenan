@@ -53,7 +53,7 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
                     continue;
 
                 var last = currentRound.Histories.LastOrDefault();
-                if (last is { Result: AnswerResult { Result: AnswerResultType.Correct } })
+                if (last is { Result: AnswerResult { Result: AnswerResultType.Correct } } or null)
                     continue;
 
                 // 最後の投稿から設定された時間以上経過しているかチェック
