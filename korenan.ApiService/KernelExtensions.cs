@@ -2,49 +2,12 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.Google;
 
 namespace Korenan.ApiService;
 
 static class KernelExtensions
 {
-    private static readonly string QuestionResponseJsonSchema = """
-    {
-        "type": "object",
-        "properties": {
-            "reason": {
-                "type": "string",
-                "description": "判断の理由"
-            },
-            "result": {
-                "type": "string",
-                "enum": ["Yes", "No", "Unanswerable"],
-                "description": "質問に対する回答"
-            }
-        },
-        "required": ["reason", "result"],
-        "additionalProperties": false
-    }
-    """;
-
-    private static readonly string AnswerResponseJsonSchema = """
-    {
-        "type": "object",
-        "properties": {
-            "reason": {
-                "type": "string",
-                "description": "判断の理由"
-            },
-            "result": {
-                "type": "string",
-                "enum": ["Correct", "MoreSpecific", "Incorrect"],
-                "description": "解答の判定結果"
-            }
-        },
-        "required": ["reason", "result"],
-        "additionalProperties": false
-    }
-    """;
-
     public static IKernelBuilderPlugins AddFromFunctions(this IKernelBuilderPlugins builder)
     {
         builder.AddFromFunctions("korenan", [
@@ -161,12 +124,12 @@ static class KernelExtensions
         {
             Name = "answer",
             InputVariables = [new() { Name = "theme" }, new() { Name = "target" }, new() { Name = "targetInfo" }, new() { Name = "input" }, new() { Name = "keywords" }],
-            OutputVariable = new()
-            {
-                Description = "質問に対する回答",
-                JsonSchema = QuestionResponseJsonSchema
-            }
         };
+        prompt.AddExecutionSettings(new GeminiPromptExecutionSettings()
+        {
+            ResponseMimeType = "application/json",
+            ResponseSchema = typeof(QuestionResponse),
+        });
         return KernelFunctionFactory.CreateFromPrompt(prompt);
     }
 
@@ -248,12 +211,12 @@ static class KernelExtensions
         {
             Name = "is_answer",
             InputVariables = [new() { Name = "correct" }, new() { Name = "answer" }, new() { Name = "correctInfo" }, new() { Name = "keywords" }],
-            OutputVariable = new()
-            {
-                Description = "解答の判定結果",
-                JsonSchema = AnswerResponseJsonSchema
-            }
         };
+        prompt.AddExecutionSettings(new GeminiPromptExecutionSettings()
+        {
+            ResponseMimeType = "application/json",
+            ResponseSchema = typeof(AnswerResponse),
+        });
         return KernelFunctionFactory.CreateFromPrompt(prompt);
     }
 
@@ -296,7 +259,7 @@ static class KernelExtensions
     public static async Task<QuestionResponse> GetAwnser(this Kernel kernel, string theme, Round round, string input, string keywords)
     {
         var result = await kernel.InvokeAsync("korenan", "answer", new() { ["theme"] = theme, ["target"] = round.Topic, ["targetInfo"] = round.TopicInfo, ["input"] = input, ["keywords"] = keywords });
-        return result.GetValue<QuestionResponse>() ?? throw new InvalidOperationException("Failed to parse QuestionResponse");
+        return result.GetFromJson<QuestionResponse>() ?? throw new InvalidOperationException("Failed to parse QuestionResponse");
     }
 
     public static async Task<string> GenQuestion(this Kernel kernel, string theme, Round round, bool yesno, bool propernoun)
@@ -319,7 +282,7 @@ static class KernelExtensions
     public static async Task<AnswerResponse> IsAnswer(this Kernel kernel, Round round, string input, string keywords)
     {
         var result = await kernel.InvokeAsync("korenan", "is_answer", new() { ["correct"] = round.Topic, ["answer"] = input, ["correctInfo"] = round.TopicInfo, ["keywords"] = keywords });
-        return result.GetValue<AnswerResponse>() ?? throw new InvalidOperationException("Failed to parse AnswerResponse");
+        return result.GetFromJson<AnswerResponse>() ?? throw new InvalidOperationException("Failed to parse AnswerResponse");
     }
 
     public static async Task<string> Summary(this Kernel kernel, string theme, string topic, string topicInfo)
@@ -328,9 +291,20 @@ static class KernelExtensions
     private static readonly JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web)
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNameCaseInsensitive = true,
         Converters =
         {
-            new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower),
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
         }
     };
+
+    private static T GetFromJson<T>(this FunctionResult result)
+    {
+        var json = result.GetValue<string>()!.Trim('`', '\n');
+        if (!json.StartsWith('{'))
+        {
+            json = json[json.IndexOf('{')..];
+        }
+        return JsonSerializer.Deserialize<T>(json, jsonOptions)!;
+    }
 }
