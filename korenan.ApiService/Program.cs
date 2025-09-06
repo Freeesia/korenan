@@ -4,6 +4,7 @@ using GoogleTrendsApi;
 using Korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web;
@@ -32,8 +33,15 @@ builder.Services.AddHttpClient(string.Empty, b =>
 
 builder.Services
     .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
-    .Configure<GoogleSearchParam>(builder.Configuration.GetSection("SemanticKernelOptions:GoogleSearch"))
-    .AddSingleton<IWebSearchEngineConnector, GoogleSearchConnector>()
+    .Configure<TavilySearchParam>(builder.Configuration.GetSection("SemanticKernelOptions:TavilySearch"))
+    .AddSingleton<IWebSearchEngineConnector>(sp =>
+    {
+        var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+        var httpClient = httpClientFactory.CreateClient();
+        var options = sp.GetRequiredService<IOptions<TavilySearchParam>>();
+        var logger = sp.GetRequiredService<ILogger<TavilySearchConnector>>();
+        return new TavilySearchConnector(options, httpClient, logger);
+    })
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WebSearchEnginePlugin>("search", sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<TimePlugin>("time", serviceProvider: sp))
     .AddSingleton(sp => KernelPluginFactory.CreateFromType<WikipediaPlugin>("wiki", serviceProvider: sp))
@@ -563,7 +571,7 @@ record CreateRoomRequest(string Name, string Aikotoba, string Theme);
 // ルーム参加リクエスト
 record JoinRoomRequest(string Name, string Aikotoba);
 
-record SemanticKernelOptions(string ModelId, string ApiKey, GoogleSearchParam GoogleSearch);
+record SemanticKernelOptions(string ModelId, string ApiKey, TavilySearchParam TavilySearch);
 record QuestionResponse(string Reason, QuestionResultType Result);
 record AnswerResponse(string Reason, AnswerResultType Result);
 
