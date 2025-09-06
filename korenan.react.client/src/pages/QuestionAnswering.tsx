@@ -124,7 +124,7 @@ function QuestionAnswering() {
     }
   };
 
-  const getPlayerName = (id: string) => scene?.players.find((p) => p.id === id)?.name || id === "00000000-0000-0000-0000-000000000000" ? "bot" : id;
+  const getPlayerName = (id: string) => scene?.players.find((p) => p.id === id)?.name || (id === "00000000-0000-0000-0000-000000000000" ? "bot" : id);
   const getAnswerResult = (result: IPlayerResult) => result as AnswerResult;
   const getQuestionResult = (result: IPlayerResult) => result as QuestionResult;
   const remainingQuestions = (config?.questionLimit ?? 0) - (sceneInfo()?.histories.filter((h) => h.type === "Question" && h.player === user?.id).length ?? 0);
