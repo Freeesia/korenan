@@ -86,7 +86,7 @@ public class BotService(ILogger<BotService> logger, Kernel kernel, IBufferDistri
             .Count();
 
         // 後半戦に入るまではAIは質問しない
-        if (playersCount < maxQuestions * 0.5)
+        if (playersCount < maxQuestions * game.Config.AiQuestionThreshold)
         {
             this.logger.LogInformation("Not enough player questions yet for game {GameId}, skipping AI question", game.Id);
             return;

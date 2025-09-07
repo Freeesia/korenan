@@ -118,4 +118,5 @@ export interface Config {
   liarPoint: number;
   noCorrectPoint: number;
   inactivityThresholdMinutes: number;
+  aiQuestionThreshold: number;
 }

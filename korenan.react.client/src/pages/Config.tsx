@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Config } from "../models";
 
 function ConfigPage({ onClose }: { onClose: () => void }) {
-  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0, noCorrectPoint: 0, inactivityThresholdMinutes: 0 });
+  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0, noCorrectPoint: 0, inactivityThresholdMinutes: 0, aiQuestionThreshold: 0 });
 
   useEffect(() => {
     fetchConfig();
@@ -104,6 +104,22 @@ function ConfigPage({ onClose }: { onClose: () => void }) {
             value={config?.inactivityThresholdMinutes}
             onChange={(e) =>
               setConfig({ ...config!, inactivityThresholdMinutes: Number(e.target.value) })
+            }
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          AI質問開始の閾値(%):
+          <input
+            type="number"
+            disabled={!config}
+            min="0"
+            max="100"
+            step="1"
+            value={config ? Math.round(config.aiQuestionThreshold * 100) : 0}
+            onChange={(e) =>
+              setConfig({ ...config!, aiQuestionThreshold: Number(e.target.value) / 100 })
             }
           />
         </label>
