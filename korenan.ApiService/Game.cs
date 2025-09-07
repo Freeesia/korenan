@@ -222,7 +222,13 @@ public enum AnswerResultType
 /// <param name="NoCorrectPoint">正解者がいなかったときのポイント</param>
 /// <param name="InactivityThresholdMinutes">AI自動質問の非活動閾値（分）</param>
 [MessagePackObject]
-public record Config([property: Key(0)] int QuestionLimit = 10, [property: Key(1)] int AnswerLimit = 5, [property: Key(2)] int CorrectPoint = 20, [property: Key(3)] int LiarPoint = 30, [property: Key(4)] int NoCorrectPoint = -10, [property: Key(5)] int InactivityThresholdMinutes = 1);
+public record Config(
+    [property: Key(0)] int QuestionLimit = 8,
+    [property: Key(1)] int AnswerLimit = 3,
+    [property: Key(2)] int CorrectPoint = 20,
+    [property: Key(3)] int LiarPoint = 30,
+    [property: Key(4)] int NoCorrectPoint = -10,
+    [property: Key(5)] int InactivityThresholdMinutes = 1);
 
 static class GameExtensions
 {
