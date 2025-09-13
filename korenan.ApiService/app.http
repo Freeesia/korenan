@@ -146,3 +146,8 @@ Content-Type: application/json
 ### ラウンドスタート
 
 POST {{base}}/start
+
+### 
+GET {{base}}/image?theme=マリオキャラ HTTP/1.1
+
+

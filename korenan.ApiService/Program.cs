@@ -1,5 +1,8 @@
 using System.Text.Json.Serialization;
 using CommunityToolkit.HighPerformance;
+using GenerativeAI;
+using GenerativeAI.Types;
+using GenerativeAI.Web;
 using GoogleTrendsApi;
 using Korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +27,7 @@ var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
     .AddGoogleAIEmbeddingGenerator(modelId, apiKey);
 kernelBuikder.Plugins.AddFromFunctions();
+builder.Services.AddGenerativeAI(new GenerativeAIOptions { Credentials = new(apiKey), Model = modelId });
 
 builder.AddRedisDistributedCache("cache");
 builder.Services.AddHttpClient(string.Empty, b =>
@@ -551,7 +555,28 @@ api.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("J
 api.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
 api.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
 api.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
+api.MapGet("/image", async ([FromServices] IGenerativeAiService aiService, [FromQuery] string theme) =>
+{
+    var img = await GenerateImage(aiService, theme);
+    return Results.File(img, "image/png");
+});
 #endif
+
+static async Task<byte[]> GenerateImage(IGenerativeAiService aiService, string theme)
+{
+    var model = aiService.CreateInstance("gemini-2.5-flash-image-preview");
+    var content = new Content($"""
+        添付の画像はAIキャラクターの画像です。
+        このキャラクターを「{theme}」に詳しい知識を持つイメージを抱かせる特徴を持つキャラクターとして書き換えてください。
+        画像の特徴を活かしつつ、「{theme}」に関連する要素を取り入れたイラストを生成してください。
+        例えば、「{theme}」に関連するアイテムやシンボルを持たせたり、背景に「{theme}」を連想させる風景を描いたりしてください。
+        """, Roles.User);
+    content.AddInlineFile("ai_character01_smile.png", Roles.User);
+    var res = await model.GenerateContentAsync(new GenerateContentRequest(content));
+    return res.Candidates?.FirstOrDefault()?.Content?.Parts.Select(p => p.InlineData).OfType<Blob>().FirstOrDefault() is { Data: { } data }
+        ? Convert.FromBase64String(data)
+        : [];
+}
 
 
 app.MapDefaultEndpoints();
