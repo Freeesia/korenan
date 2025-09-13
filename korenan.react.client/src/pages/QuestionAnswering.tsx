@@ -1,3 +1,4 @@
+import "./QuestionAnswering.css";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { SceneContext, UserContext, TitleContext } from "../App";
 import { QuestionAnsweringSceneInfo, QuestionResultType, AnswerResultType, IPlayerResult, AnswerResult, QuestionResult, Config } from "../models";
@@ -140,22 +141,29 @@ function QuestionAnswering() {
         お題が分かったら、「解答」ボタンで答えてみてね！
       </p>
       <h3>テーマ: 「{scene?.theme}」</h3>
-      <div>
-        <ul>
-          {sceneInfo()?.histories.map((history, index) => (
-            <li key={index}>
-              {getPlayerName(history.player)}:{" "}
-              {history.type === "Question" ? (
-                <span>
-                  {getQuestionResult(history).question} - {getQuestionResult(history).result}
-                </span>
-              ) : (
-                <span>
-                  {getAnswerResult(history).answer} - {getAnswerResult(history).result}
-                </span>
-              )}
-            </li>
-          ))}
+      <div className="history-background">
+        <ul className="history-list">
+          {sceneInfo()?.histories.map((history, index) => {
+            const isOwnMessage = history.player === user?.id;
+            return (
+              <li key={index} className={`history-wrapper ${isOwnMessage ? 'own-message' : ''}`}>
+                <div className="player-name">{getPlayerName(history.player)}</div>
+                <div className="history-item">
+                  {history.type === "Question" ? (
+                    <div className="message-content">
+                      <div className="question-text">{getQuestionResult(history).question}</div>
+                      <div className="result-text">{getQuestionResult(history).result}</div>
+                    </div>
+                  ) : (
+                    <div className="message-content">
+                      <div className="answer-text">{getAnswerResult(history).answer}</div>
+                      <div className="result-text">{getAnswerResult(history).result}</div>
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
       <div>
@@ -173,8 +181,7 @@ function QuestionAnswering() {
         <button onClick={() => qRecog.start()} disabled={isWaiting || remainingQuestions <= 0}>
           🎙️
         </button>
-        <pre>{qResult}</pre>
-        <p>残りの質問回数: {remainingQuestions}</p>
+        <span>残り: {remainingQuestions} 回</span>
       </div>
       <div>
         <input type="text" placeholder="解答" value={answer} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()} onChange={(e) => setAnswer(e.target.value)} disabled={isWaiting || remainingAnswers <= 0} />
@@ -184,8 +191,7 @@ function QuestionAnswering() {
         <button onClick={() => aRecog.start()} disabled={isWaiting || remainingAnswers <= 0}>
           🎙️
         </button>
-        <pre>{aResult}</pre>
-        <p>残りの解答回数: {remainingAnswers}</p>
+        <span>残り: {remainingAnswers} 回</span>
       </div>
     </div>
   );
