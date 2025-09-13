@@ -148,6 +148,6 @@ Content-Type: application/json
 POST {{base}}/start
 
 ### 
-GET {{base}}/image?theme=マリオキャラ HTTP/1.1
+GET {{base}}/gen-image?theme=ボカロ曲 HTTP/1.1
 
 
