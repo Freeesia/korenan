@@ -1,3 +1,4 @@
+import "./QuestionAnswering.css";
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { SceneContext, UserContext, TitleContext } from "../App";
 import { QuestionAnsweringSceneInfo, QuestionResultType, AnswerResultType, IPlayerResult, AnswerResult, QuestionResult, Config } from "../models";
@@ -130,62 +131,81 @@ function QuestionAnswering() {
   const remainingQuestions = (config?.questionLimit ?? 0) - (sceneInfo()?.histories.filter((h) => h.type === "Question" && h.player === user?.id).length ?? 0);
   const remainingAnswers = (config?.answerLimit ?? 0) - (sceneInfo()?.histories.filter((h) => h.type === "Answer" && h.player === user?.id).length ?? 0);
 
+  const getResultEmoji = (resultText: QuestionResultType | AnswerResultType) => {
+    switch (resultText) {
+      case "Yes":
+        return "⭕";
+      case "No":
+        return "❌";
+      case "Unanswerable":
+        return "🤔";
+      case "Correct":
+        return "🎉";
+      case "MoreSpecific":
+        return "⚠️";
+      case "Incorrect":
+        return "❌";
+      default:
+        return "💭";
+    }
+  };
+
   return (
     <div>
-      <p>
-        AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
-        <br />
-        他のプレイヤーが投げた質問も確認できるよ。
-        <br />
-        お題が分かったら、「解答」ボタンで答えてみてね！
-      </p>
-      <h3>テーマ: 「{scene?.theme}」</h3>
-      <div>
-        <ul>
-          {sceneInfo()?.histories.map((history, index) => (
-            <li key={index}>
-              {getPlayerName(history.player)}:{" "}
-              {history.type === "Question" ? (
-                <span>
-                  {getQuestionResult(history).question} - {getQuestionResult(history).result}
-                </span>
-              ) : (
-                <span>
-                  {getAnswerResult(history).answer} - {getAnswerResult(history).result}
-                </span>
-              )}
-            </li>
-          ))}
+      <div className="scene-header">
+        <p>
+          AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
+          <br />
+          他のプレイヤーが投げた質問も確認できるよ。
+          <br />
+          お題が分かったら、「解答」ボタンで答えてみてね！
+        </p>
+        <h3>テーマ: 「{scene?.theme}」</h3>
+      </div>
+      <div className="history-background">
+        <ul className="history-list">
+          {sceneInfo()?.histories.map((history, index) => {
+            const isOwnMessage = history.player === user?.id;
+            return (
+              <li key={index} className={`history-wrapper ${isOwnMessage ? "own-message" : ""}`}>
+                {!isOwnMessage && <div className="player-name">{getPlayerName(history.player)}</div>}
+                <div className="message-container">
+                  <div className="history-item">{history.type === "Question" ? getQuestionResult(history).question : getAnswerResult(history).answer}</div>
+                  <div className="result-emoji">{history.type === "Question" ? getResultEmoji(getQuestionResult(history).result) : getResultEmoji(getAnswerResult(history).result)}</div>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
-      <div>
-        <input
-          type="text"
-          placeholder="質問"
-          value={question}
-          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && askQuestion()}
-          onChange={(e) => setQuestion(e.target.value)}
-          disabled={isWaiting || remainingQuestions <= 0}
-        />
-        <button onClick={() => askQuestion()} disabled={isWaiting || remainingQuestions <= 0 || question === ""}>
-          質問
-        </button>
-        <button onClick={() => qRecog.start()} disabled={isWaiting || remainingQuestions <= 0}>
-          🎙️
-        </button>
-        <pre>{qResult}</pre>
-        <p>残りの質問回数: {remainingQuestions}</p>
-      </div>
-      <div>
-        <input type="text" placeholder="解答" value={answer} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()} onChange={(e) => setAnswer(e.target.value)} disabled={isWaiting || remainingAnswers <= 0} />
-        <button onClick={() => submitAnswer()} disabled={isWaiting || remainingAnswers <= 0 || answer === ""}>
-          解答
-        </button>
-        <button onClick={() => aRecog.start()} disabled={isWaiting || remainingAnswers <= 0}>
-          🎙️
-        </button>
-        <pre>{aResult}</pre>
-        <p>残りの解答回数: {remainingAnswers}</p>
+      <div className="input-area">
+        <div>
+          <input
+            type="text"
+            placeholder="質問"
+            value={question}
+            onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && askQuestion()}
+            onChange={(e) => setQuestion(e.target.value)}
+            disabled={isWaiting || remainingQuestions <= 0}
+          />
+          <button onClick={() => askQuestion()} disabled={isWaiting || remainingQuestions <= 0 || question === ""}>
+            質問
+          </button>
+          <button onClick={() => qRecog.start()} disabled={isWaiting || remainingQuestions <= 0}>
+            🎙️
+          </button>
+          <span>{remainingQuestions} 回</span>
+        </div>
+        <div>
+          <input type="text" placeholder="解答" value={answer} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()} onChange={(e) => setAnswer(e.target.value)} disabled={isWaiting || remainingAnswers <= 0} />
+          <button onClick={() => submitAnswer()} disabled={isWaiting || remainingAnswers <= 0 || answer === ""}>
+            解答
+          </button>
+          <button onClick={() => aRecog.start()} disabled={isWaiting || remainingAnswers <= 0}>
+            🎙️
+          </button>
+          <span>{remainingAnswers} 回</span>
+        </div>
       </div>
     </div>
   );

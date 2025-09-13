@@ -1,5 +1,9 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 using CommunityToolkit.HighPerformance;
+using GenerativeAI;
+using GenerativeAI.Types;
+using GenerativeAI.Web;
 using GoogleTrendsApi;
 using Korenan.ApiService;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +28,7 @@ var kernelBuikder = builder.Services.AddKernel()
     .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
     .AddGoogleAIEmbeddingGenerator(modelId, apiKey);
 kernelBuikder.Plugins.AddFromFunctions();
+builder.Services.AddGenerativeAI(new GenerativeAIOptions { Credentials = new(apiKey), Model = modelId });
 
 builder.AddRedisDistributedCache("cache");
 builder.Services.AddHttpClient(string.Empty, b =>
@@ -119,7 +124,7 @@ static async Task NextScene(IBufferDistributedCache cache, Game game, Kernel ker
                 // 全ラウンド終了していなければ次のラウンドを開始
                 if (game.Topics.Count != game.Rounds.Count)
                 {
-                    await StartNextRound(game, kernel, cache, token);
+                    await StartNextRound(game, kernel, null, cache, token);
                 }
                 else
                 {
@@ -263,7 +268,7 @@ api.MapPost("/topic", async (HttpContext context, [FromServices] IBufferDistribu
 var startLock = new KeyedAsyncLock();
 
 // ラウンド開始
-api.MapPost("/start", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromServices] Kernel kernel) =>
+api.MapPost("/start", async (HttpContext context, [FromServices] IBufferDistributedCache cache, [FromServices] Kernel kernel, [FromServices] IGenerativeAiService aiService) =>
 {
     var game = await GetCurrentGame(context, cache) ?? throw new InvalidOperationException("Game not found.");
     if (game.Players.Any(p => p.CurrentScene != GameScene.WaitRoundStart))
@@ -280,30 +285,52 @@ api.MapPost("/start", async (HttpContext context, [FromServices] IBufferDistribu
     {
         return Results.BadRequest("The round has already started.");
     }
-    await StartNextRound(game, kernel, cache, context.RequestAborted);
+    await StartNextRound(game, kernel, aiService, cache, context.RequestAborted);
 
     // ゲーム開始時にあいことばを消して使いまわせるようにする
     await cache.RemoveAsync($"game/aikotoba/{game.Aikotoba}", context.RequestAborted);
     return Results.Ok();
 });
 
-static async Task StartNextRound(Game game, Kernel kernel, IBufferDistributedCache cache, CancellationToken token = default)
+static async Task StartNextRound(Game game, Kernel kernel, IGenerativeAiService? aiService, IBufferDistributedCache cache, CancellationToken token = default)
 {
     game = await cache.Update<Game>($"game/room/{game.Id}", g => g with { CurrentScene = GameScene.TopicSelecting }, token);
-    var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
-    var topic = topics[Random.Shared.Next(topics.Length)];
-    var topicInfo = string.Join(Environment.NewLine, [
-        .. await kernel.InvokeAsync<List<string>>("search", "Search", new() { ["query"] = $"{game.Theme}の{topic}の概要" }, token) ?? [],
-        await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = $"intitle:\"{topic}\" deepcat:\"{game.Theme}\"" }, token),
-        ]);
-    topicInfo = await kernel.Summary(game.Theme, topic, topicInfo);
-    var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray();
-    var round = new Round(topic, topicInfo, liars, [], []);
+    async Task<Round> GenRound()
+    {
+        var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
+        var topic = topics[Random.Shared.Next(topics.Length)];
+        var topicInfo = string.Join(Environment.NewLine, [
+            .. await kernel.InvokeAsync<List<string>>("search", "Search", new() { ["query"] = $"{game.Theme}の{topic}の概要" }, token) ?? [],
+                await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = $"intitle:\"{topic}\" deepcat:\"{game.Theme}\"" }, token),
+            ]);
+        topicInfo = await kernel.Summary(game.Theme, topic, topicInfo);
+        var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToArray();
+        return new Round(topic, topicInfo, liars, [], []);
+    }
+    async Task<Round?> GenImage()
+    {
+        if (aiService is null)
+        {
+            return null;
+        }
+        var theme = game.Theme;
+        var img = await GenerateImage(aiService, $"""
+            The attached image is an AI character.
+            You must output an image where this character has been rewritten to possess characteristics that evoke an image of someone knowledgeable about "{theme}".
+            Generate an illustration that incorporates elements related to "{theme}" while utilizing the image's existing features.
+            For example, have the character hold items or symbols related to "{theme}", or depict scenery in the background that evokes associations with "{theme}".
+            Do not include text in the image.
+            """,
+            GetEmbeddedImageResource());
+        await cache.SetAsync($"game/image/bot/{game.Id}", img, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromDays(1) }, token);
+        return null;
+    }
+    var results = await Task.WhenAll(GenRound(), GenImage()!);
     await cache.Update<Game>($"game/room/{game.Id}", g => g with
     {
         Players = [.. g.Players.Select(p => p with { CurrentScene = GameScene.QuestionAnswering })],
         CurrentScene = GameScene.QuestionAnswering,
-        Rounds = [.. g.Rounds, round]
+        Rounds = [.. g.Rounds, results[0]]
     }, token);
 }
 
@@ -542,6 +569,16 @@ api.MapPost("/config", async (HttpContext context, [FromServices] IBufferDistrib
     return Results.Ok();
 });
 
+api.MapGet("/image/bot", async (HttpContext context, [FromServices] IBufferDistributedCache cache) =>
+{
+    if (await GetCurrentGame(context, cache) is not { } game)
+    {
+        return Results.NotFound();
+    }
+    var img = await cache.GetAsync($"game/image/bot/{game.Id}", context.RequestAborted);
+    return img is null ? Results.NotFound() : Results.File(img, "image/png");
+});
+
 #if DEBUG
 api.MapGet("/wiki", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = keyword }));
 api.MapGet("/search", ([FromServices] Kernel kernel, [FromQuery] string keyword) => kernel.InvokeAsync<string>("search", "Search", new() { ["query"] = keyword }));
@@ -551,8 +588,44 @@ api.MapGet("/trends/RealtimeSearches", () => GoogleTrends.GetRealtimeSearches("J
 api.MapGet("/trends/TopCharts", () => GoogleTrends.GetTopCharts(2020, hl: "ja", geo: "JP"));
 api.MapGet("/trends/TodaySearches", () => GoogleTrends.GetTodaySearches(geo: "JP", hl: "ja"));
 api.MapGet("/trends/RelatedQueries", () => GoogleTrends.GetRelatedQueries([string.Empty], geo: "JP"));
+api.MapGet("/gen-image", async ([FromServices] IGenerativeAiService aiService, [FromQuery] string theme) =>
+{
+    var img = await GenerateImage(aiService, $"""
+        The attached image is an AI character.
+        You must output an image where this character has been rewritten to possess characteristics that evoke an image of someone knowledgeable about "{theme}".
+        Generate an illustration that incorporates elements related to "{theme}" while utilizing the image's existing features.
+        For example, have the character hold items or symbols related to "{theme}", or depict scenery in the background that evokes associations with "{theme}".
+        Do not include text in the image.
+        """,
+        GetEmbeddedImageResource());
+    if (img.Length == 0)
+    {
+        return Results.NotFound();
+    }
+    return Results.File(img, "image/png");
+});
 #endif
 
+static byte[] GetEmbeddedImageResource()
+{
+    var assembly = Assembly.GetExecutingAssembly();
+    var resourceName = "Korenan.ApiService.ai_character01_smile.png";
+    using var stream = assembly.GetManifestResourceStream(resourceName) ?? throw new FileNotFoundException($"埋め込みリソース '{resourceName}' が見つかりません。");
+    using var memoryStream = new MemoryStream();
+    stream.CopyTo(memoryStream);
+    return memoryStream.ToArray();
+}
+
+static async Task<byte[]> GenerateImage(IGenerativeAiService aiService, string prompt, byte[] baseImage)
+{
+    var model = aiService.CreateInstance("gemini-2.5-flash-image-preview");
+    var content = new Content(prompt, Roles.User);
+    content.AddInlineData(Convert.ToBase64String(baseImage), "image/png");
+    var res = await model.GenerateContentAsync(new GenerateContentRequest(content));
+    return res.Candidates?.FirstOrDefault()?.Content?.Parts.Select(p => p.InlineData).OfType<Blob>().FirstOrDefault() is { Data: { } data }
+        ? Convert.FromBase64String(data)
+        : [];
+}
 
 app.MapDefaultEndpoints();
 app.MapFallbackToFile("/index.html");

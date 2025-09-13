@@ -146,3 +146,8 @@ Content-Type: application/json
 ### ラウンドスタート
 
 POST {{base}}/start
+
+### 
+GET {{base}}/gen-image?theme=ボカロ曲 HTTP/1.1
+
+
