@@ -1,4 +1,4 @@
-#root {
+#qa {
   background-image: linear-gradient(
       rgba(30, 30, 30, 0.5),
       rgba(30, 30, 30, 0.5)
@@ -7,8 +7,10 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
-  margin: 0;
+  background-attachment: scroll;
+  height: calc(100% - 32px);
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .scene-header {
@@ -19,7 +21,7 @@
 }
 
 .history-background {
-  padding-bottom: 16px;
+  padding-bottom: 88px;
 }
 
 .input-area {
@@ -27,6 +29,17 @@
   color: #f0f0f0;
   background-color: rgba(50, 50, 50, 0.8);
   border-radius: 8px;
+  position: fixed;
+  z-index: 1000;
+  bottom: 40px;
+  width: calc(100% - 40px);
+  max-width: calc(800px - 40px);
+  margin: 0 auto;
+
+  button {
+    margin: 2px;
+    padding: 4px;
+  }
 }
 
 .history-list {

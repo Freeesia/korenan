@@ -42,8 +42,10 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 320px;
-  min-height: 100vh;
-  padding-top: 60px; /* モバイルナビの高さに合わせて調整 */
+  height: calc(100dvh - 104px);
+  padding-top: 64px; /* モバイルナビの高さに合わせて調整 */
+  padding-bottom: 40px;
+  justify-content: center;
 }
 
 h1 {

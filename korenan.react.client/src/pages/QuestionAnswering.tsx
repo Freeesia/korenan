@@ -11,8 +11,6 @@ function QuestionAnswering() {
   const [, setPageTitle] = useContext(TitleContext);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [qResult, setQResult] = useState<QuestionResultType>();
-  const [aResult, setAResult] = useState<AnswerResultType>();
   const [isWaiting, setIsWaiting] = useState(false);
   const [config, setConfig] = useState<Config>();
   const prevHistoriesLengthRef = useRef<number>(0);
@@ -65,15 +63,13 @@ function QuestionAnswering() {
       return;
     }
     setIsWaiting(true);
-    const res = await fetch("/api/question", {
+    await fetch("/api/question", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(final),
     });
-    const data: QuestionResultType = await res.json();
-    setQResult(data);
     setQuestion("");
     setIsWaiting(false);
   };
@@ -84,15 +80,13 @@ function QuestionAnswering() {
       return;
     }
     setIsWaiting(true);
-    const res = await fetch("/api/answer", {
+    await fetch("/api/answer", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(final),
     });
-    const data: AnswerResultType = await res.json();
-    setAResult(data);
     setAnswer("");
     setIsWaiting(false);
   };
@@ -151,7 +145,7 @@ function QuestionAnswering() {
   };
 
   return (
-    <div>
+    <div id="qa">
       <div className="scene-header">
         <p>
           AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
@@ -181,6 +175,7 @@ function QuestionAnswering() {
       <div className="input-area">
         <div>
           <input
+            name="question"
             type="text"
             placeholder="質問"
             value={question}
@@ -197,7 +192,15 @@ function QuestionAnswering() {
           <span>{remainingQuestions} 回</span>
         </div>
         <div>
-          <input type="text" placeholder="解答" value={answer} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()} onChange={(e) => setAnswer(e.target.value)} disabled={isWaiting || remainingAnswers <= 0} />
+          <input
+            name="answer"
+            type="text"
+            placeholder="解答"
+            value={answer}
+            onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()}
+            onChange={(e) => setAnswer(e.target.value)}
+            disabled={isWaiting || remainingAnswers <= 0}
+          />
           <button onClick={() => submitAnswer()} disabled={isWaiting || remainingAnswers <= 0 || answer === ""}>
             解答
           </button>

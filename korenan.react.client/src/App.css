@@ -1,25 +1,22 @@
 ﻿#root {
-  max-width: 1280px;
+  max-width: 800px;
   margin: 0 auto;
   text-align: center;
   display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+  width: 100%;
 }
 
 .app-container {
   display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  position: relative;
   flex: 1;
   justify-content: space-between;
+  width: 100%;
 }
 
 /* メインコンテンツエリア - フッターの高さ分の余白を確保 */
 .app-content {
   flex: 1;
-  padding-bottom: 60px;
 }
 
 /* フッター */
@@ -151,11 +148,4 @@ td {
 .mobile-menu a:hover,
 .mobile-menu button:hover {
   background-color: #555;
-}
-
-/* レスポンシブ調整 */
-@media (max-width: 768px) {
-  #root {
-    padding: 1rem;
-  }
 }
