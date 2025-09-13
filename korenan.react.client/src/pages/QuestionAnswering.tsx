@@ -131,6 +131,25 @@ function QuestionAnswering() {
   const remainingQuestions = (config?.questionLimit ?? 0) - (sceneInfo()?.histories.filter((h) => h.type === "Question" && h.player === user?.id).length ?? 0);
   const remainingAnswers = (config?.answerLimit ?? 0) - (sceneInfo()?.histories.filter((h) => h.type === "Answer" && h.player === user?.id).length ?? 0);
 
+  const getResultEmoji = (resultText: QuestionResultType | AnswerResultType) => {
+    switch (resultText) {
+      case "Yes":
+        return "⭕";
+      case "No":
+        return "❌";
+      case "Unanswerable":
+        return "🤔";
+      case "Correct":
+        return "🎉";
+      case "MoreSpecific":
+        return "⚠️";
+      case "Incorrect":
+        return "❌";
+      default:
+        return "💭";
+    }
+  };
+
   return (
     <div>
       <p>
@@ -146,20 +165,11 @@ function QuestionAnswering() {
           {sceneInfo()?.histories.map((history, index) => {
             const isOwnMessage = history.player === user?.id;
             return (
-              <li key={index} className={`history-wrapper ${isOwnMessage ? 'own-message' : ''}`}>
-                <div className="player-name">{getPlayerName(history.player)}</div>
-                <div className="history-item">
-                  {history.type === "Question" ? (
-                    <div className="message-content">
-                      <div className="question-text">{getQuestionResult(history).question}</div>
-                      <div className="result-text">{getQuestionResult(history).result}</div>
-                    </div>
-                  ) : (
-                    <div className="message-content">
-                      <div className="answer-text">{getAnswerResult(history).answer}</div>
-                      <div className="result-text">{getAnswerResult(history).result}</div>
-                    </div>
-                  )}
+              <li key={index} className={`history-wrapper ${isOwnMessage ? "own-message" : ""}`}>
+                {!isOwnMessage && <div className="player-name">{getPlayerName(history.player)}</div>}
+                <div className="message-container">
+                  <div className="history-item">{history.type === "Question" ? getQuestionResult(history).question : getAnswerResult(history).answer}</div>
+                  <div className="result-emoji">{history.type === "Question" ? getResultEmoji(getQuestionResult(history).result) : getResultEmoji(getAnswerResult(history).result)}</div>
                 </div>
               </li>
             );
