@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 using CommunityToolkit.HighPerformance;
 using GenerativeAI;
@@ -320,7 +321,7 @@ static async Task StartNextRound(Game game, Kernel kernel, IGenerativeAiService?
             For example, have the character hold items or symbols related to "{theme}", or depict scenery in the background that evokes associations with "{theme}".
             Do not include text in the image.
             """,
-            await File.ReadAllBytesAsync("ai_character01_smile.png", token));
+            GetEmbeddedImageResource());
         await cache.SetAsync($"game/image/bot/{game.Id}", img, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromDays(1) }, token);
         return null;
     }
@@ -596,7 +597,7 @@ api.MapGet("/gen-image", async ([FromServices] IGenerativeAiService aiService, [
         For example, have the character hold items or symbols related to "{theme}", or depict scenery in the background that evokes associations with "{theme}".
         Do not include text in the image.
         """,
-        await File.ReadAllBytesAsync("ai_character01_smile.png"));
+        GetEmbeddedImageResource());
     if (img.Length == 0)
     {
         return Results.NotFound();
@@ -604,6 +605,16 @@ api.MapGet("/gen-image", async ([FromServices] IGenerativeAiService aiService, [
     return Results.File(img, "image/png");
 });
 #endif
+
+static byte[] GetEmbeddedImageResource()
+{
+    var assembly = Assembly.GetExecutingAssembly();
+    var resourceName = "Korenan.ApiService.ai_character01_smile.png";
+    using var stream = assembly.GetManifestResourceStream(resourceName) ?? throw new FileNotFoundException($"埋め込みリソース '{resourceName}' が見つかりません。");
+    using var memoryStream = new MemoryStream();
+    stream.CopyTo(memoryStream);
+    return memoryStream.ToArray();
+}
 
 static async Task<byte[]> GenerateImage(IGenerativeAiService aiService, string prompt, byte[] baseImage)
 {
