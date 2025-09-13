@@ -152,14 +152,16 @@ function QuestionAnswering() {
 
   return (
     <div>
-      <p>
-        AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
-        <br />
-        他のプレイヤーが投げた質問も確認できるよ。
-        <br />
-        お題が分かったら、「解答」ボタンで答えてみてね！
-      </p>
-      <h3>テーマ: 「{scene?.theme}」</h3>
+      <div className="scene-header">
+        <p>
+          AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
+          <br />
+          他のプレイヤーが投げた質問も確認できるよ。
+          <br />
+          お題が分かったら、「解答」ボタンで答えてみてね！
+        </p>
+        <h3>テーマ: 「{scene?.theme}」</h3>
+      </div>
       <div className="history-background">
         <ul className="history-list">
           {sceneInfo()?.histories.map((history, index) => {
@@ -176,32 +178,34 @@ function QuestionAnswering() {
           })}
         </ul>
       </div>
-      <div>
-        <input
-          type="text"
-          placeholder="質問"
-          value={question}
-          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && askQuestion()}
-          onChange={(e) => setQuestion(e.target.value)}
-          disabled={isWaiting || remainingQuestions <= 0}
-        />
-        <button onClick={() => askQuestion()} disabled={isWaiting || remainingQuestions <= 0 || question === ""}>
-          質問
-        </button>
-        <button onClick={() => qRecog.start()} disabled={isWaiting || remainingQuestions <= 0}>
-          🎙️
-        </button>
-        <span>残り: {remainingQuestions} 回</span>
-      </div>
-      <div>
-        <input type="text" placeholder="解答" value={answer} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()} onChange={(e) => setAnswer(e.target.value)} disabled={isWaiting || remainingAnswers <= 0} />
-        <button onClick={() => submitAnswer()} disabled={isWaiting || remainingAnswers <= 0 || answer === ""}>
-          解答
-        </button>
-        <button onClick={() => aRecog.start()} disabled={isWaiting || remainingAnswers <= 0}>
-          🎙️
-        </button>
-        <span>残り: {remainingAnswers} 回</span>
+      <div className="input-area">
+        <div>
+          <input
+            type="text"
+            placeholder="質問"
+            value={question}
+            onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && askQuestion()}
+            onChange={(e) => setQuestion(e.target.value)}
+            disabled={isWaiting || remainingQuestions <= 0}
+          />
+          <button onClick={() => askQuestion()} disabled={isWaiting || remainingQuestions <= 0 || question === ""}>
+            質問
+          </button>
+          <button onClick={() => qRecog.start()} disabled={isWaiting || remainingQuestions <= 0}>
+            🎙️
+          </button>
+          <span>{remainingQuestions} 回</span>
+        </div>
+        <div>
+          <input type="text" placeholder="解答" value={answer} onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitAnswer()} onChange={(e) => setAnswer(e.target.value)} disabled={isWaiting || remainingAnswers <= 0} />
+          <button onClick={() => submitAnswer()} disabled={isWaiting || remainingAnswers <= 0 || answer === ""}>
+            解答
+          </button>
+          <button onClick={() => aRecog.start()} disabled={isWaiting || remainingAnswers <= 0}>
+            🎙️
+          </button>
+          <span>{remainingAnswers} 回</span>
+        </div>
       </div>
     </div>
   );
