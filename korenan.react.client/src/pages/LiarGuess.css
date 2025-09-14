@@ -1,12 +1,13 @@
 table.history {
-	max-width: 800px;
-	justify-self: center;
+  max-width: 800px;
+  justify-self: center;
 }
+
 tr.reason {
-	font-size: small;
+  font-size: small;
   color: lightgray;
 
-	td {
-		padding-bottom: 1rem;
-	}
+  td {
+    padding-bottom: 1rem;
+  }
 }

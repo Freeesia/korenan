@@ -14,6 +14,7 @@ function QuestionAnswering() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [config, setConfig] = useState<Config>();
   const prevHistoriesLengthRef = useRef<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [playNotifySound] = useSound(notificationSound);
 
   const sceneInfo = useCallback(() => {
@@ -34,6 +35,14 @@ function QuestionAnswering() {
 
       // 効果音を再生
       playNotifySound();
+
+      // スクロールを一番下に移動
+      if (containerRef.current) {
+        containerRef.current.scrollTo({
+          top: containerRef.current.scrollHeight,
+          behavior: "smooth"
+        });
+      }
     }
     prevHistoriesLengthRef.current = histories.length;
   }, [scene, sceneInfo, playNotifySound]);
@@ -145,7 +154,7 @@ function QuestionAnswering() {
   };
 
   return (
-    <div id="qa">
+    <div id="qa" ref={containerRef}>
       <div className="scene-header">
         <p>
           AIに「Yes」か「No」で答えられる質問を投げかけてみよう！
