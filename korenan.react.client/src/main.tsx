@@ -13,6 +13,7 @@ if (import.meta.env.PROD) {
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(),
       Sentry.feedbackIntegration({
+        autoInject: false,
         colorScheme: "system",
         showName: false,
         showEmail: false,
