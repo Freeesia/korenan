@@ -1,6 +1,6 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useLocation, useNavigationType, createRoutesFromChildren, matchRoutes } from "react-router";
 import "./index.css";
 import App from "./App.tsx";
 import * as Sentry from "@sentry/react";
@@ -26,8 +26,14 @@ if (import.meta.env.PROD) {
         isRequiredLabel: "必須",
         messageLabel: "メッセージ",
         messagePlaceholder: "改善するとよりゲームが面白くなりそうな点を詳細に記入よろしくお願いします。",
-        successMessageText:
-          "フィードバックありがとうございます。🙇送信が完了しました！💛",
+        successMessageText: "フィードバックありがとうございます。🙇送信が完了しました！💛",
+      }),
+      Sentry.reactRouterV7BrowserTracingIntegration({
+        useEffect,
+        useLocation,
+        useNavigationType,
+        createRoutesFromChildren,
+        matchRoutes,
       }),
     ],
     // Tracing
@@ -42,7 +48,7 @@ const container = document.getElementById("root");
 const root = createRoot(container!, {
   // Callback called when an error is thrown and not caught by an ErrorBoundary.
   onUncaughtError: Sentry.reactErrorHandler((error, errorInfo) => {
-    console.warn('Uncaught error', error, errorInfo.componentStack);
+    console.warn("Uncaught error", error, errorInfo.componentStack);
   }),
   // Callback called when React catches an error in an ErrorBoundary.
   onCaughtError: Sentry.reactErrorHandler(),

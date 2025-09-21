@@ -12,9 +12,10 @@ import GameEnd from "./pages/GameEnd";
 import CreateRoom from "./pages/CreateRoom";
 import JoinRoom from "./pages/JoinRoom";
 import { CurrentScene, User } from "./models";
+import { withSentryReactRouterV7Routing } from "@sentry/react";
 
 const APP_TITLE = "これなーんだ❓(ライアー)";
-
+const SentryRoutes = withSentryReactRouterV7Routing(Routes);
 export const SceneContext = createContext<[CurrentScene | undefined, () => Promise<void>]>([undefined, async () => {}]);
 export const UserContext = createContext<[User | undefined, (u: User) => void]>([undefined, () => {}]);
 export const TitleContext = createContext<[string, (title: string) => void]>([APP_TITLE, () => {}]);
@@ -179,7 +180,7 @@ function App() {
               </div>
             </nav>
             <div className="app-content">
-              <Routes>
+              <SentryRoutes>
                 <Route path="/" element={<Home />} />
                 <Route path="/debug" element={<Debug />} />
                 <Route path="/RegisterTopic" element={<RegisterTopic />} />
@@ -190,7 +191,7 @@ function App() {
                 <Route path="/GameEnd" element={<GameEnd />} />
                 <Route path="/CreateRoom" element={<CreateRoom />} />
                 <Route path="/JoinRoom" element={<JoinRoom />} />
-              </Routes>
+              </SentryRoutes>
             </div>
             <footer>
               <div>
