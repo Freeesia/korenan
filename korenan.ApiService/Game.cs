@@ -229,8 +229,8 @@ public record Config(
     [property: Key(2)] int CorrectPoint = 20,
     [property: Key(3)] int LiarPoint = 30,
     [property: Key(4)] int NoCorrectPoint = -10,
-    [property: Key(5)] int InactivityThresholdMinutes = 1,
-    [property: Key(6)] double AiQuestionThreshold = 0.5);
+    [property: Key(5)] float InactivityThresholdMinutes = 0.5f,
+    [property: Key(6)] float AiQuestionThreshold = 0.5f);
 
 static class GameExtensions
 {

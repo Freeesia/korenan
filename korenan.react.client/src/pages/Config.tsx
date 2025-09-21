@@ -101,6 +101,8 @@ function ConfigPage({ onClose }: { onClose: () => void }) {
           <input
             type="number"
             disabled={!config}
+            min="0"
+            step="0.1"
             value={config?.inactivityThresholdMinutes}
             onChange={(e) =>
               setConfig({ ...config!, inactivityThresholdMinutes: Number(e.target.value) })
