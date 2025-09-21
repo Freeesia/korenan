@@ -5,37 +5,51 @@ import "./index.css";
 import App from "./App.tsx";
 import * as Sentry from "@sentry/react";
 
-Sentry.init({
-  dsn: "https://21dc6375520a0183f914419ad766f153@o351180.ingest.us.sentry.io/4508710538117120",
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration(),
-    Sentry.feedbackIntegration({
-      colorScheme: "system",
-      showName: false,
-      showEmail: false,
-      triggerLabel: "フィードバックを送る",
-      formTitle: "フィードバックを送る",
-      submitButtonLabel: "送信",
-      cancelButtonLabel: "キャンセル",
-      confirmButtonLabel: "OK",
-      addScreenshotButtonLabel: "スクショを追加",
-      removeScreenshotButtonLabel: "スクショを削除",
-      isRequiredLabel: "必須",
-      messageLabel: "メッセージ",
-      messagePlaceholder: "改善するとよりゲームが面白くなりそうな点を詳細に記入よろしくお願いします。",
-      successMessageText:
-        "フィードバックありがとうございます。🙇送信が完了しました！💛",
-    }),
-  ],
-  // Tracing
-  tracesSampleRate: 1.0, //  Capture 100% of the transactions
-  // Session Replay
-  replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-  replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
-});
+// デプロイ環境でのみSentryを初期化
+if (import.meta.env.PROD) {
+  Sentry.init({
+    dsn: "https://21dc6375520a0183f914419ad766f153@o351180.ingest.us.sentry.io/4508710538117120",
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+      Sentry.feedbackIntegration({
+        colorScheme: "system",
+        showName: false,
+        showEmail: false,
+        triggerLabel: "フィードバックを送る",
+        formTitle: "フィードバックを送る",
+        submitButtonLabel: "送信",
+        cancelButtonLabel: "キャンセル",
+        confirmButtonLabel: "OK",
+        addScreenshotButtonLabel: "スクショを追加",
+        removeScreenshotButtonLabel: "スクショを削除",
+        isRequiredLabel: "必須",
+        messageLabel: "メッセージ",
+        messagePlaceholder: "改善するとよりゲームが面白くなりそうな点を詳細に記入よろしくお願いします。",
+        successMessageText:
+          "フィードバックありがとうございます。🙇送信が完了しました！💛",
+      }),
+    ],
+    // Tracing
+    tracesSampleRate: 1.0, //  Capture 100% of the transactions
+    // Session Replay
+    replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
+    replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
+  });
+}
 
-createRoot(document.getElementById("root")!).render(
+const container = document.getElementById("root");
+const root = createRoot(container!, {
+  // Callback called when an error is thrown and not caught by an ErrorBoundary.
+  onUncaughtError: Sentry.reactErrorHandler((error, errorInfo) => {
+    console.warn('Uncaught error', error, errorInfo.componentStack);
+  }),
+  // Callback called when React catches an error in an ErrorBoundary.
+  onCaughtError: Sentry.reactErrorHandler(),
+  // Callback called when React automatically recovers from errors.
+  onRecoverableError: Sentry.reactErrorHandler(),
+});
+root.render(
   <StrictMode>
     <BrowserRouter>
       <App />
