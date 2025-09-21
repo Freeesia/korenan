@@ -1,9 +1,4 @@
 #qa {
-  background-image: linear-gradient(
-      rgba(30, 30, 30, 0.5),
-      rgba(30, 30, 30, 0.5)
-    ),
-    url("/api/image/bot");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

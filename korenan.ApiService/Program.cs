@@ -569,13 +569,9 @@ api.MapPost("/config", async (HttpContext context, [FromServices] IBufferDistrib
     return Results.Ok();
 });
 
-api.MapGet("/image/bot", async (HttpContext context, [FromServices] IBufferDistributedCache cache) =>
+api.MapGet("/image/bot/{room}", async ([FromServices] IBufferDistributedCache cache, [FromRoute] string room, CancellationToken cancellationToken) =>
 {
-    if (await GetCurrentGame(context, cache) is not { } game)
-    {
-        return Results.NotFound();
-    }
-    var img = await cache.GetAsync($"game/image/bot/{game.Id}", context.RequestAborted);
+    var img = await cache.GetAsync($"game/image/bot/{room}", cancellationToken);
     return img is null ? Results.NotFound() : Results.File(img, "image/png");
 });
 

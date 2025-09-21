@@ -60,6 +60,15 @@ function QuestionAnswering() {
     setPageTitle("質問タイム");
   }, [setPageTitle]);
 
+  // 背景画像を動的に設定
+  useEffect(() => {
+    const qaElement = document.getElementById("qa");
+    if (qaElement && scene?.id) {
+      const backgroundImageUrl = `/api/image/bot/${scene.id}`;
+      qaElement.style.backgroundImage = `linear-gradient(rgba(30, 30, 30, 0.5), rgba(30, 30, 30, 0.5)), url("${backgroundImageUrl}")`;
+    }
+  }, [scene?.id]);
+
   const fetchConfig = async () => {
     const res = await fetch("/api/config");
     const data: Config = await res.json();
