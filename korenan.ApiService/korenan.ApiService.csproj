@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
-    <PackageReference Include="Google_GenerativeAI.Web" Version="3.2.0" />
+    <PackageReference Include="Google_GenerativeAI.Web" Version="3.6.3" />
     <PackageReference Include="MessagePack" Version="3.1.4" />
     <PackageReference Include="MessagePackAnalyzer" Version="3.1.4">
       <PrivateAssets>all</PrivateAssets>
