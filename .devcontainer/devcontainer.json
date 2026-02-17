@@ -8,7 +8,7 @@
 		"ghcr.io/nikiforovall/devcontainer-features/dotnet-aspire:1": {},
 		"ghcr.io/devcontainers/features/node:1": {},
         "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-        "ghcr.io/devcontainers/features/powershell:1": {}
+        "ghcr.io/devcontainers/features/powershell:2": {}
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
