@@ -299,7 +299,7 @@ static async Task StartNextRound(Game game, Kernel kernel, IGenerativeAiService?
     {
         var topics = game.Topics.Values.Except(game.Rounds.Select(r => r.Topic)).ToArray();
         var topic = topics[Random.Shared.Next(topics.Length)];
-        var topicInfo = string.Join(Environment.NewLine, [
+        var topicInfo = string.Join(System.Environment.NewLine, [
             .. await kernel.InvokeAsync<List<string>>("search", "Search", new() { ["query"] = $"{game.Theme}の{topic}の概要" }, token) ?? [],
                 await kernel.InvokeAsync<string>("wiki", "Search", new() { ["query"] = $"intitle:\"{topic}\" deepcat:\"{game.Theme}\"" }, token),
             ]);
