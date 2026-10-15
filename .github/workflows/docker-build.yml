@@ -26,6 +26,8 @@ jobs:
           context: .
           file: korenan.ApiService/Dockerfile
           push: true
+          build-args: |
+            VITE_SENTRY_DSN=${{ vars.SENTRY_DSN }}
           tags: |
             ghcr.io/freeesia/korenan:latest
             ghcr.io/freeesia/korenan:${{ github.sha }}

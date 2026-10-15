@@ -1,73 +1,59 @@
-import { useContext, useState, useEffect } from "react";
-import { UserContext, TitleContext, SceneContext } from "../App";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useActionState } from "react";
+import { useSearchParams } from "react-router";
+import { api, errorMessage } from "../api/client";
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
+import { useGame, usePageTitle } from "../context/game";
+import form from "../styles/form.module.css";
+import page from "../styles/page.module.css";
+
+interface FormState {
+  error?: string;
+  name: string;
+  aikotoba: string;
+}
 
 function JoinRoom() {
-  const [, startFetchingScene] = useContext(SceneContext);
-  const [user, setUser] = useContext(UserContext);
-  const [, setPageTitle] = useContext(TitleContext);
-  const [name, setName] = useState(user?.name || "");
-  const [aikotoba, setAikotoba] = useState("");
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { user, setUser, reconnect } = useGame();
+  const [searchParams] = useSearchParams();
+  usePageTitle("ルーム参加");
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const aikotobaParam = params.get("aikotoba");
-    if (aikotobaParam) {
-      setAikotoba(aikotobaParam);
-    }
-
-    setPageTitle("ルーム参加");
-
-    // ユーザーコンテキストに値がある場合はユーザー名を更新
-    if (user?.name && !name) {
-      setName(user.name);
-    }
-  }, [location.search, setPageTitle, user, name]);
-
-  const joinRoom = async () => {
-    const response = await fetch("/api/joinRoom", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, aikotoba }),
-    });
-
-    if (!response.ok) {
-      alert("ルーム参加に失敗しました");
-      return;
-    }
-
-    const data = await response.json();
-    setUser(data);
-    await startFetchingScene();
-    navigate("/RegisterTopic");
-  };
-
-  const isFormValid = name && aikotoba;
+  const [state, formAction, isPending] = useActionState(
+    async (_: FormState, formData: FormData): Promise<FormState> => {
+      const values = {
+        name: String(formData.get("name") ?? ""),
+        aikotoba: String(formData.get("aikotoba") ?? ""),
+      };
+      const { data, error } = await api.POST("/api/joinRoom", { body: values });
+      if (!data) {
+        return { ...values, error: errorMessage(error, "ルーム参加に失敗しました") };
+      }
+      setUser(data);
+      reconnect();
+      return values;
+    },
+    { name: user?.name ?? "", aikotoba: searchParams.get("aikotoba") ?? "" },
+  );
 
   return (
-    <div>
-      <div>
-        <label>プレイヤー名を入力してください:</label>
-        <div>
-          <input type="text" id="username" placeholder="プレイヤー名" autoComplete="on" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-      </div>
-
-      <div>
-        <label>あいことばを入力してください:</label>
-        <div>
-          <input type="text" id="aikotoba" placeholder="あいことば" autoComplete="on" value={aikotoba} onChange={(e) => setAikotoba(e.target.value)} />
-        </div>
-        <p>ルーム作成者から教えてもらったあいことばを入力してください</p>
-      </div>
-
-      <button onClick={joinRoom} disabled={!isFormValid}>
-        ルームに参加
-      </button>
+    <div className={page.page}>
+      <Card>
+        <form key={user?.id} action={formAction} className={form.form}>
+          <label className={form.field}>
+            <span className={form.label}>プレイヤー名</span>
+            <input className={form.input} name="name" placeholder="プレイヤー名" autoComplete="nickname" defaultValue={state.name || user?.name} required />
+          </label>
+          <label className={form.field}>
+            <span className={form.label}>あいことば</span>
+            <input className={form.input} name="aikotoba" placeholder="あいことば" autoComplete="off" defaultValue={state.aikotoba} required />
+            <span className={form.hint}>ルーム作成者から教えてもらったあいことばを入力してください</span>
+          </label>
+          {state.error && <p className={form.error}>{state.error}</p>}
+          <Button type="submit" variant="primary" block disabled={isPending}>
+            {isPending ? "参加中…" : "ルームに参加"}
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

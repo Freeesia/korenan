@@ -1,14 +1,17 @@
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation, useNavigationType, createRoutesFromChildren, matchRoutes } from "react-router";
-import "./index.css";
-import App from "./App.tsx";
 import * as Sentry from "@sentry/react";
+import "./styles/global.css";
+import App from "./App.tsx";
+import { GameProvider } from "./context/GameProvider.tsx";
 
-// デプロイ環境でのみSentryを初期化
-if (import.meta.env.PROD) {
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+
+// デプロイ環境かつDSNが設定されている場合のみSentryを初期化
+if (import.meta.env.PROD && sentryDsn) {
   Sentry.init({
-    dsn: "https://21dc6375520a0183f914419ad766f153@o351180.ingest.us.sentry.io/4508710538117120",
+    dsn: sentryDsn,
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(),
@@ -37,29 +40,26 @@ if (import.meta.env.PROD) {
         matchRoutes,
       }),
     ],
-    // Tracing
-    tracesSampleRate: 1.0, //  Capture 100% of the transactions
-    // Session Replay
-    replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-    replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
   });
 }
 
 const container = document.getElementById("root");
 const root = createRoot(container!, {
-  // Callback called when an error is thrown and not caught by an ErrorBoundary.
   onUncaughtError: Sentry.reactErrorHandler((error, errorInfo) => {
     console.warn("Uncaught error", error, errorInfo.componentStack);
   }),
-  // Callback called when React catches an error in an ErrorBoundary.
   onCaughtError: Sentry.reactErrorHandler(),
-  // Callback called when React automatically recovers from errors.
   onRecoverableError: Sentry.reactErrorHandler(),
 });
 root.render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <GameProvider>
+        <App />
+      </GameProvider>
     </BrowserRouter>
-  </StrictMode>
+  </StrictMode>,
 );

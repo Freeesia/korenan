@@ -71,8 +71,21 @@ builder.Services.AddHttpClient(nameof(WikipediaSearch), c => c.DefaultRequestHea
 
 builder.Services
     .AddProblemDetails()
-    .AddOpenApi()
-    .ConfigureHttpJsonOptions(op => op.SerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+    .AddOpenApi(options => options.AddSchemaTransformer((schema, context, _) =>
+    {
+        if (schema.Properties?.ContainsKey("type") == true
+            && context.JsonTypeInfo.Type.GetInterfaces().Any(i => i.GetCustomAttribute<JsonPolymorphicAttribute>() is not null))
+        {
+            schema.Required ??= new HashSet<string>();
+            schema.Required.Add("type");
+        }
+        return Task.CompletedTask;
+    }))
+    .ConfigureHttpJsonOptions(op =>
+    {
+        op.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+        op.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
     .AddSingleton(sp => sp.GetRequiredService<IDistributedCache>() as IBufferDistributedCache ?? throw new InvalidOperationException("内部的にはIBufferDistributedCacheで実装されているはず"))
     .AddSingleton<RoomNotifier>()
     .AddSingleton<GameStore>()

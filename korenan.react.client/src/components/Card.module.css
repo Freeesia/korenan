@@ -1,0 +1,21 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.solid {
+  background-color: var(--color-surface);
+}
+
+.translucent {
+  background-color: var(--color-overlay);
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 700;
+}

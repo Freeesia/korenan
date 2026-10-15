@@ -3,6 +3,8 @@ WORKDIR /src/korenan.react.client
 COPY korenan.react.client/package.json korenan.react.client/package-lock.json ./
 RUN npm ci
 COPY korenan.react.client/ ./
+ARG VITE_SENTRY_DSN
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build

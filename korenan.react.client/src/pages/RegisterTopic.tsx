@@ -1,54 +1,45 @@
-import { useContext, useState, useEffect } from "react";
-import { SceneContext, TitleContext } from "../App";
+import { useActionState } from "react";
+import { api, errorMessage } from "../api/client";
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
+import { PlayerList } from "../components/PlayerList";
+import { useGame, usePageTitle } from "../context/game";
+import form from "../styles/form.module.css";
+import page from "../styles/page.module.css";
 
 function RegisterTopic() {
-  const [scene] = useContext(SceneContext);
-  const [, setPageTitle] = useContext(TitleContext);
-  const [topic, setTopic] = useState("");
+  const { scene } = useGame();
+  usePageTitle("お題登録");
 
-  useEffect(() => {
-    setPageTitle("お題登録");
-  }, [setPageTitle]);
-
-  const register = async () => {
-    const response = await fetch("/api/topic", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(topic),
-    });
-
-    if (!response.ok) {
-      alert("お題登録に失敗しました");
-      return;
-    }
-  };
-
-  const isFormValid = topic;
+  const [error, formAction, isPending] = useActionState(async (_: string | undefined, formData: FormData) => {
+    const { error } = await api.POST("/api/topic", { body: String(formData.get("topic") ?? "") });
+    return error ? errorMessage(error, "お題登録に失敗しました") : undefined;
+  }, undefined);
 
   return (
-    <div>
-      {scene?.theme && (
-        <div>
-          <h2>テーマ: {scene.theme}</h2>
-          <p>このテーマに関連するお題を考えてください</p>
-        </div>
-      )}
-      <div>
-        <label>お題を入力してください:</label>
-        <div>
-          <input type="text" placeholder="お題" value={topic} onChange={(e) => setTopic(e.target.value)} />
-        </div>
-        <p>
-          テーマ「{scene?.theme}」に沿ったお題を登録してください
-          <br />
-          （なるべく正式名称や名前が被らないお題を入れてください）
-        </p>
+    <div className={page.page}>
+      <Card variant="translucent">
+        <h2 className={page.heading}>テーマ: 「{scene?.theme}」</h2>
+        <p className={page.lead}>このテーマに関連するお題を考えてください</p>
+      </Card>
+      <Card>
+        <form action={formAction} className={form.form}>
+          <label className={form.field}>
+            <span className={form.label}>お題</span>
+            <input className={form.input} name="topic" placeholder="お題" autoComplete="off" required />
+            <span className={form.hint}>なるべく正式名称や、他の人と名前が被らないお題を入れてください</span>
+          </label>
+          {error && <p className={form.error}>{error}</p>}
+          <Button type="submit" variant="primary" block disabled={isPending}>
+            {isPending ? "登録中…" : "登録する"}
+          </Button>
+        </form>
+      </Card>
+      <div className={page.mobileOnly}>
+        <Card title="参加プレイヤー">
+          <PlayerList />
+        </Card>
       </div>
-      <button onClick={register} disabled={!isFormValid}>
-        登録する
-      </button>
     </div>
   );
 }

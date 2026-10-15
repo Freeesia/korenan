@@ -145,11 +145,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           }
@@ -193,11 +189,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
+              "type": "integer",
               "format": "int32"
             }
           }
@@ -553,65 +545,37 @@
         "type": "object",
         "properties": {
           "questionLimit": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32",
             "default": 8
           },
           "answerLimit": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32",
             "default": 3
           },
           "correctPoint": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32",
             "default": 20
           },
           "liarPoint": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32",
             "default": 30
           },
           "noCorrectPoint": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32",
             "default": -10
           },
           "inactivityThresholdMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": [
-              "number",
-              "string"
-            ],
+            "type": "number",
             "format": "float",
             "default": 0.5
           },
           "aiQuestionThreshold": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": [
-              "number",
-              "string"
-            ],
+            "type": "number",
             "format": "float",
             "default": 0.5
           }
@@ -662,11 +626,7 @@
             "$ref": "#/components/schemas/GameScene"
           },
           "round": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "hostId": {
@@ -739,7 +699,8 @@
         "required": [
           "player",
           "answer",
-          "result"
+          "result",
+          "type"
         ],
         "properties": {
           "type": {
@@ -764,7 +725,8 @@
         "required": [
           "player",
           "question",
-          "result"
+          "result",
+          "type"
         ],
         "properties": {
           "type": {
@@ -823,6 +785,9 @@
         }
       },
       "ISceneInfoEmptySceneInfo": {
+        "required": [
+          "type"
+        ],
         "properties": {
           "type": {
             "enum": [
@@ -834,7 +799,8 @@
       },
       "ISceneInfoGameEndInfo": {
         "required": [
-          "results"
+          "results",
+          "type"
         ],
         "properties": {
           "type": {
@@ -856,7 +822,8 @@
           "topic",
           "topicCorrectPlayers",
           "guessedPlayers",
-          "histories"
+          "histories",
+          "type"
         ],
         "properties": {
           "type": {
@@ -892,7 +859,8 @@
       },
       "ISceneInfoQuestionAnsweringSceneInfo": {
         "required": [
-          "histories"
+          "histories",
+          "type"
         ],
         "properties": {
           "type": {
@@ -910,6 +878,9 @@
         }
       },
       "ISceneInfoTopicSelectingSceneInfo": {
+        "required": [
+          "type"
+        ],
         "properties": {
           "type": {
             "enum": [
@@ -921,7 +892,8 @@
       },
       "ISceneInfoWaitRoundSceneInfo": {
         "required": [
-          "waiting"
+          "waiting",
+          "type"
         ],
         "properties": {
           "type": {
@@ -931,11 +903,7 @@
             "type": "string"
           },
           "waiting": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           }
         }
@@ -973,11 +941,7 @@
             "$ref": "#/components/schemas/GameScene"
           },
           "points": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32",
             "default": 0
           }
