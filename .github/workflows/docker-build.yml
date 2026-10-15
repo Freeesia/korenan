@@ -9,6 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
 
     steps:
@@ -25,4 +26,6 @@ jobs:
           context: .
           file: korenan.ApiService/Dockerfile
           push: true
-          tags: ghcr.io/freeesia/korenan:latest
+          tags: |
+            ghcr.io/freeesia/korenan:latest
+            ghcr.io/freeesia/korenan:${{ github.sha }}

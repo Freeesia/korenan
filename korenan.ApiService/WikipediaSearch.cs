@@ -1,26 +1,25 @@
-using System.ComponentModel;
-using System.Text;
 using System.Text.Json;
 using Genbox.Wikipedia;
 using Genbox.Wikipedia.Enums;
-using Microsoft.SemanticKernel;
 using MwParserFromScratch;
 using MwParserFromScratch.Nodes;
 
 namespace Korenan.ApiService;
 
-public sealed class WikipediaPlugin(HttpClient httpClient)
+/// <summary>
+/// 日本語版 Wikipedia から記事本文を取得する
+/// </summary>
+public sealed class WikipediaSearch(IHttpClientFactory httpClientFactory)
 {
     private static readonly JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly WikipediaClient client = new(httpClient)
-    {
-        DefaultLanguage = WikiLanguage.Japanese,
-    };
-    private readonly HttpClient httpClient = httpClient;
 
-    [KernelFunction, Description("Search Wikipedia for a given query")]
-    public async Task<string> SearchAsync([Description("Search query")] string query, CancellationToken cancellationToken = default)
+    public async Task<string> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
+        var httpClient = httpClientFactory.CreateClient(nameof(WikipediaSearch));
+        using var client = new WikipediaClient(httpClient)
+        {
+            DefaultLanguage = WikiLanguage.Japanese,
+        };
         var req = new WikiSearchRequest(query)
         {
             Limit = 1,
@@ -35,7 +34,7 @@ public sealed class WikipediaPlugin(HttpClient httpClient)
             return string.Empty;
         }
 
-        var wikiRes = await this.httpClient.GetFromJsonAsync<WikiResponse>(
+        var wikiRes = await httpClient.GetFromJsonAsync<WikiResponse>(
             $"https://ja.wikipedia.org/w/api.php?action=parse&formatversion=2&pageid={result.PageId}&format=json&redirects=1&prop=wikitext",
             jsonOptions,
             cancellationToken);
@@ -43,22 +42,6 @@ public sealed class WikipediaPlugin(HttpClient httpClient)
 
         var parser = new WikitextParser();
         var doc = parser.Parse(parseRes.WikiText, cancellationToken);
-
-        // セクション指定はなくしてみる
-        // お題が「PS4」だった時に、「いつも使うPS4」の項目しか取れなかった...
-        // var sec = result.SectionTitle ?? parseRes.Redirects.FirstOrDefault()?.ToFragment;
-        // if (!string.IsNullOrEmpty(sec))
-        // {
-        //     var secNode = doc.Lines.OfType<Heading>().FirstOrDefault(h => h.ToPlainText() == sec);
-        //     var sectionText = new StringBuilder();
-        //     var node = secNode?.NextNode;
-        //     while (node is not Heading and not null)
-        //     {
-        //         sectionText.AppendLine(node.ToPlainText(NodePlainTextOptions.RemoveRefTags));
-        //         node = node.NextNode;
-        //     }
-        //     return sectionText.ToString();
-        // }
 
         // 関連項目、脚注以降はあまり重要ではない情報なので削る
         Node? delete = doc.Lines.OfType<Heading>().FirstOrDefault(h => h.ToPlainText() is "関連項目" or "脚注");

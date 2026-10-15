@@ -18,3 +18,21 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+  - package-ecosystem: "npm"
+    directory: "/korenan.react.client"
+    schedule:
+      interval: weekly
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      eslint:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-plugin-*"
+          - "typescript-eslint"
+          - "globals"
