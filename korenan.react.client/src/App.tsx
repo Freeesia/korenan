@@ -1,208 +1,168 @@
-import { Routes, Route, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { createContext, useState, useEffect, useRef, useCallback } from "react";
-import "./App.css";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Route, Routes, useLocation, useNavigate } from "react-router";
+import { withSentryReactRouterV7Routing } from "@sentry/react";
+import { api } from "./api/client";
+import { GameInfoPanel } from "./components/GameInfoPanel";
+import { PlayerList } from "./components/PlayerList";
+import { useCurrentPlayer, useGame } from "./context/game";
+import { transitionTo } from "./navigation";
 import Home from "./pages/Home";
-import Debug from "./pages/Debug";
+import CreateRoom from "./pages/CreateRoom";
+import JoinRoom from "./pages/JoinRoom";
 import RegisterTopic from "./pages/RegisterTopic";
 import WaitRoundStart from "./pages/WaitRoundStart";
 import TopicSelecting from "./pages/TopicSelecting";
 import QuestionAnswering from "./pages/QuestionAnswering";
 import LiarGuess from "./pages/LiarGuess";
 import GameEnd from "./pages/GameEnd";
-import CreateRoom from "./pages/CreateRoom";
-import JoinRoom from "./pages/JoinRoom";
-import { CurrentScene, User } from "./models";
-import { withSentryReactRouterV7Routing } from "@sentry/react";
+import styles from "./App.module.css";
 
-const APP_TITLE = "これなーんだ❓(ライアー)";
 const SentryRoutes = withSentryReactRouterV7Routing(Routes);
-export const SceneContext = createContext<[CurrentScene | undefined, () => Promise<void>]>([undefined, async () => {}]);
-export const UserContext = createContext<[User | undefined, (u: User) => void]>([undefined, () => {}]);
-export const TitleContext = createContext<[string, (title: string) => void]>([APP_TITLE, () => {}]);
+const Debug = import.meta.env.DEV ? lazy(() => import("./pages/Debug")) : undefined;
+const PUBLIC_PATHS = ["/", "/createroom", "/joinroom"];
 
-function App() {
-  const [scene, setScene] = useState<CurrentScene>();
-  const [user, setUser] = useState<User>();
-  const [lastFetchTime, setLastFetchTime] = useState<Date>();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [pageTitle, setPageTitle] = useState(APP_TITLE);
-  const [points, setPoints] = useState(0);
+function useSceneNavigation() {
+  const { scene, user } = useGame();
   const navigate = useNavigate();
-  const location = useLocation();
-  const intervalId = useRef<NodeJS.Timeout>(undefined);
+  const { pathname } = useLocation();
 
-  const stopFetchingScene = useCallback(() => {
-    const id = intervalId.current;
-    intervalId.current = undefined;
-    clearInterval(id);
-  }, []);
-
-  const fetchScene = useCallback(async () => {
-    const response = await fetch("/api/scene");
-    if (response.status === 404) {
-      stopFetchingScene();
-      setScene(undefined);
+  useEffect(() => {
+    const path = pathname.toLowerCase();
+    if (scene === undefined || path === "/debug") {
       return;
     }
-    if (!response.ok) {
-      return;
-    }
-    const data: CurrentScene = await response.json();
-    setScene(data);
-
-    // シーン情報とユーザー情報があれば得点を更新
-    if (data && user) {
-      const currentPlayer = data.players.find((p) => p.id === user.id);
-      if (currentPlayer) {
-        setPoints(currentPlayer.points);
+    if (scene === null) {
+      if (!PUBLIC_PATHS.includes(path)) {
+        transitionTo(navigate, "/");
       }
+      return;
     }
-
-    setLastFetchTime(new Date());
-  }, [stopFetchingScene]);
-
-  const fetchUser = async () => {
-    const response = await fetch("/api/me");
-    if (response.ok) {
-      const data: User = await response.json();
-      setUser(data);
+    if (!user) {
+      return;
     }
-  };
+    const player = scene.players.find((p) => p.id === user.id);
+    const target = `/${scene.scene === "WaitRoundStart" ? (player?.currentScene ?? "RegisterTopic") : scene.scene}`;
+    if (path !== target.toLowerCase()) {
+      transitionTo(navigate, target);
+    }
+  }, [scene, user, pathname, navigate]);
+}
+
+function Header() {
+  const { scene, user, title } = useGame();
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const leaveGame = async () => {
-    if (!user) return;
-    await fetch("/api/ban", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user.id),
-    });
-    setScene(undefined);
+    if (!user) {
+      return;
+    }
+    await api.POST("/api/ban", { body: user.id });
     setMenuOpen(false);
   };
 
-  const startFetchingScene = useCallback(async () => {
-    await fetchScene();
-    if (!intervalId.current) {
-      intervalId.current = setInterval(fetchScene, 1000);
-    }
-  }, [fetchScene]);
+  return (
+    <header className={styles.header}>
+      <button type="button" className={styles.title} onClick={() => transitionTo(navigate, "/")}>
+        {title}
+      </button>
+      <button type="button" className={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)} aria-label="メニュー" aria-expanded={menuOpen}>
+        <span />
+        <span />
+        <span />
+      </button>
+      <nav className={`${styles.menu} ${menuOpen ? styles.open : ""}`}>
+        <ul>
+          {import.meta.env.DEV && (
+            <>
+              <li>
+                <button type="button" onClick={() => { setMenuOpen(false); transitionTo(navigate, "/debug"); }}>
+                  デバッグ
+                </button>
+              </li>
+              <li>
+                <a href="/scalar" target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)}>
+                  API リファレンス
+                </a>
+              </li>
+            </>
+          )}
+          {scene && (
+            <li>
+              <button type="button" onClick={leaveGame}>
+                ゲームを抜ける
+              </button>
+            </li>
+          )}
+        </ul>
+      </nav>
+    </header>
+  );
+}
 
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
-  };
+function Footer() {
+  const { scene, user } = useGame();
+  const player = useCurrentPlayer();
+  if (!user) {
+    return null;
+  }
+  return (
+    <footer className={styles.footer}>
+      プレイヤー: {user.name}
+      {scene && player && ` (得点: ${player.points})`}
+    </footer>
+  );
+}
 
-  const navigateTo = useCallback(
-    (path: string) => {
-      if (location.pathname === path) {
-        return;
-      }
-      document.startViewTransition(() => {
-        navigate(path);
-      });
-    },
-    [navigate, location.pathname]
+function App() {
+  const { scene } = useGame();
+  const { pathname } = useLocation();
+  useSceneNavigation();
+  const inGame = !!scene && pathname.toLowerCase() !== "/debug";
+
+  const routes = (
+    <SentryRoutes>
+      <Route path="/" element={<Home />} />
+      <Route path="/CreateRoom" element={<CreateRoom />} />
+      <Route path="/JoinRoom" element={<JoinRoom />} />
+      <Route path="/RegisterTopic" element={<RegisterTopic />} />
+      <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
+      <Route path="/TopicSelecting" element={<TopicSelecting />} />
+      <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
+      <Route path="/LiarGuess" element={<LiarGuess />} />
+      <Route path="/GameEnd" element={<GameEnd />} />
+      {Debug && (
+        <Route
+          path="/debug"
+          element={
+            <Suspense>
+              <Debug />
+            </Suspense>
+          }
+        />
+      )}
+    </SentryRoutes>
   );
 
-  const navigateToHome = () => {
-    navigateTo("/");
-  };
-
-  useEffect(() => {
-    fetchUser();
-    startFetchingScene();
-    return stopFetchingScene;
-  }, [startFetchingScene, stopFetchingScene]);
-
-  useEffect(() => {
-    const currentPath = location.pathname.substring(1);
-    // デバッグ画面は常に表示可能
-    if (currentPath === "debug") {
-      return;
-    }
-    // ルーム作成・参加画面はシーン情報がない場合は表示可能
-    if ((currentPath === "createRoom" || currentPath === "joinRoom") && !scene) {
-      return;
-    }
-    // シーン情報かユーザーがない場合はホームに遷移
-    if (!scene || !user) {
-      navigateToHome();
-      return;
-    }
-
-    // プレイヤー個別の状態を取得
-    const currentPlayer = scene.players.find((p) => p.id === user.id);
-    if (!currentPlayer) {
-      navigateToHome();
-      return;
-    }
-    const playerScene = currentPlayer.currentScene;
-    const gameScene = scene.scene;
-
-    // ゲームシーンに応じて遷移
-    if (scene.scene === "WaitRoundStart") {
-      navigateTo(`/${playerScene}`);
-    } else {
-      navigateTo(`/${gameScene}`);
-    }
-  }, [scene, user, location, navigateToHome]);
-
   return (
-    <SceneContext.Provider value={[scene, startFetchingScene]}>
-      <UserContext.Provider value={[user, setUser]}>
-        <TitleContext.Provider value={[pageTitle, setPageTitle]}>
-          <div className="app-container">
-            <nav className="mobile-nav">
-              <div className="nav-content">
-                <button onClick={navigateToHome} className="app-title-button">
-                  {pageTitle}
-                </button>
-                <div className="hamburger-icon" onClick={toggleMenu}>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-              <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
-                <ul>
-                  <li>
-                    <NavLink to="/debug" onClick={() => setMenuOpen(false)}>
-                      デバッグ
-                    </NavLink>
-                  </li>
-                  {scene && (
-                    <li>
-                      <button onClick={leaveGame}>ゲームを抜ける</button>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            </nav>
-            <div className="app-content">
-              <SentryRoutes>
-                <Route path="/" element={<Home />} />
-                <Route path="/debug" element={<Debug />} />
-                <Route path="/RegisterTopic" element={<RegisterTopic />} />
-                <Route path="/WaitRoundStart" element={<WaitRoundStart />} />
-                <Route path="/TopicSelecting" element={<TopicSelecting />} />
-                <Route path="/QuestionAnswering" element={<QuestionAnswering />} />
-                <Route path="/LiarGuess" element={<LiarGuess />} />
-                <Route path="/GameEnd" element={<GameEnd />} />
-                <Route path="/CreateRoom" element={<CreateRoom />} />
-                <Route path="/JoinRoom" element={<JoinRoom />} />
-              </SentryRoutes>
-            </div>
-            <footer>
-              <div>
-                {scene && `最終更新: ${lastFetchTime?.toLocaleTimeString()} | `}プレイヤー: {user?.name}
-                {scene && ` (得点: ${points})`}
-              </div>
-            </footer>
-          </div>
-        </TitleContext.Provider>
-      </UserContext.Provider>
-    </SceneContext.Provider>
+    <div className={styles.shell}>
+      <Header />
+      {inGame ? (
+        <div className={styles.game}>
+          <aside className={`${styles.side} ${styles.left}`}>
+            <h2 className={styles.sideTitle}>プレイヤー</h2>
+            <PlayerList />
+          </aside>
+          <main className={styles.center}>{routes}</main>
+          <aside className={`${styles.side} ${styles.right}`}>
+            <GameInfoPanel />
+          </aside>
+        </div>
+      ) : (
+        <main className={styles.main}>{routes}</main>
+      )}
+      <Footer />
+    </div>
   );
 }
 

@@ -1,80 +1,36 @@
 import { fileURLToPath, URL } from "node:url";
+import { env } from "node:process";
 import { defineConfig } from "vite";
-import plugin from "@vitejs/plugin-react";
-import fs from "fs";
-import path from "path";
-import child_process from "child_process";
-import { env } from "process";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 
-function createHttps() {
-  const baseFolder =
-    env.APPDATA !== undefined && env.APPDATA !== ""
-      ? `${env.APPDATA}/ASP.NET/https`
-      : `${env.HOME}/.aspnet/https`;
+const target =
+  env.APISERVICE_HTTPS ??
+  env.APISERVICE_HTTP ??
+  env.services__apiservice__https__0 ??
+  env.services__apiservice__http__0 ??
+  "https://localhost:7013";
 
-  const certificateName = "korenan.react.client";
-  const certFilePath = path.join(baseFolder, `${certificateName}.pem`);
-  const keyFilePath = path.join(baseFolder, `${certificateName}.key`);
+const proxy = {
+  target,
+  secure: false,
+  changeOrigin: true,
+};
 
-  if (!fs.existsSync(baseFolder)) {
-    fs.mkdirSync(baseFolder, { recursive: true });
-  }
-
-  if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
-    if (
-      0 !==
-      child_process.spawnSync(
-        "dotnet",
-        [
-          "dev-certs",
-          "https",
-          "--export-path",
-          certFilePath,
-          "--format",
-          "Pem",
-          "--no-password",
-        ],
-        { stdio: "inherit" }
-      ).status
-    ) {
-      throw new Error("Could not create certificate.");
-    }
-  }
-  return {
-    key: fs.readFileSync(keyFilePath),
-    cert: fs.readFileSync(certFilePath),
-  };
-}
-
-const target = env.ASPNETCORE_HTTPS_PORT
-  ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}`
-  : env.ASPNETCORE_URLS
-  ? env.ASPNETCORE_URLS.split(";")[0]
-  : "https://localhost:7013";
-
-const https = target.startsWith("https://") ? createHttps() : undefined;
-
-// https://vitejs.dev/config/
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [plugin()],
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
   server: {
-    proxy: {
-      "^/api": {
-        target,
-        secure: false,
-      },
-      "^/swagger": {
-        target,
-        secure: false,
-      },
-    },
-    port: parseInt(env.VITE_PORT!),
-    https,
     host: true,
+    proxy: {
+      "^/api": proxy,
+      "^/openapi": proxy,
+      "^/scalar": proxy,
+    },
   },
 });

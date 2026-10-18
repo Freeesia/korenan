@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using MessagePack;
 
@@ -14,16 +15,18 @@ namespace Korenan.ApiService;
 /// <param name="Rounds">ラウンド</param>
 /// <param name="CurrentScene">現在のシーン</param>
 /// <param name="Config">コンフィグ</param>
+/// <param name="HostId">ホストのプレイヤーID</param>
 [MessagePackObject]
 public record Game(
     [property: Key(0)] string Id,
     [property: Key(1)] string Aikotoba,
     [property: Key(2)] string Theme,
-    [property: Key(3)] List<Player> Players,
-    [property: Key(4)] Dictionary<Guid, string> Topics,
-    [property: Key(5)] List<Round> Rounds,
+    [property: Key(3)] ImmutableArray<Player> Players,
+    [property: Key(4)] ImmutableDictionary<Guid, string> Topics,
+    [property: Key(5)] ImmutableArray<Round> Rounds,
     [property: Key(6)] GameScene CurrentScene,
-    [property: Key(7)] Config Config);
+    [property: Key(7)] Config Config,
+    [property: Key(8)] Guid HostId);
 
 public enum GameScene
 {
@@ -63,22 +66,14 @@ public enum GameScene
 /// </summary>
 /// <param name="Id">プレイヤーID</param>
 /// <param name="Name">プレイヤー名</param>
-/// <param name="Topic">登録したお題</param>
+/// <param name="CurrentScene">プレイヤーの現在のシーン</param>
+/// <param name="Points">プレイヤーのポイント</param>
 [MessagePackObject]
-public record Player([property: Key(0)] Guid Id, [property: Key(1)] string Name)
-{
-    /// <summary>
-    /// プレイヤーの現在のシーン
-    /// </summary>
-    [Key(2)]
-    public GameScene CurrentScene { get; set; }
-
-    /// <summary>
-    /// プレイヤーのポイント
-    /// </summary>
-    [Key(3)]
-    public int Points { get; set; }
-}
+public record Player(
+    [property: Key(0)] Guid Id,
+    [property: Key(1)] string Name,
+    [property: Key(2)] GameScene CurrentScene = GameScene.RegisterTopic,
+    [property: Key(3)] int Points = 0);
 
 /// <summary>
 /// ラウンド情報
@@ -89,7 +84,12 @@ public record Player([property: Key(0)] Guid Id, [property: Key(1)] string Name)
 /// <param name="Histories">履歴</param>
 /// <param name="LiarGuesses">ライアープレイヤーの推理</param>
 [MessagePackObject]
-public record Round([property: Key(0)] string Topic, [property: Key(1)] string TopicInfo, [property: Key(2)] Guid[] Liars, [property: Key(3)] List<HistoryInfo> Histories, [property: Key(4)] List<LiarGuess> LiarGuesses);
+public record Round(
+    [property: Key(0)] string Topic,
+    [property: Key(1)] string TopicInfo,
+    [property: Key(2)] ImmutableArray<Guid> Liars,
+    [property: Key(3)] ImmutableArray<HistoryInfo> Histories,
+    [property: Key(4)] ImmutableArray<LiarGuess> LiarGuesses);
 
 /// <summary>
 /// ライアープレイヤーを推理する対象
@@ -109,35 +109,15 @@ public record LiarGuess([property: Key(0)] Guid Player, [property: Key(1)] Guid 
 public record HistoryInfo([property: Key(0)] IPlayerResult Result, [property: Key(1)] string Reason, [property: Key(2)] DateTime PostedAt);
 
 /// <summary>
-/// プレイヤー行動の結果タイプ
-/// </summary>
-public enum PlayerResultType
-{
-    /// <summary>
-    /// 質問
-    /// </summary>
-    Question,
-
-    /// <summary>
-    /// 解答
-    /// </summary>
-    Answer,
-}
-
-/// <summary>
 /// 結果のインターフェース
 /// </summary>
-[JsonDerivedType(typeof(QuestionResult))]
-[JsonDerivedType(typeof(AnswerResult))]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(QuestionResult), "Question")]
+[JsonDerivedType(typeof(AnswerResult), "Answer")]
 [Union(0, typeof(QuestionResult))]
 [Union(1, typeof(AnswerResult))]
 public interface IPlayerResult
 {
-    /// <summary>
-    /// 結果のタイプ
-    /// </summary>
-    PlayerResultType Type { get; }
-
     /// <summary>
     /// プレイヤーID
     /// </summary>
@@ -151,11 +131,7 @@ public interface IPlayerResult
 /// <param name="Question">質問内容</param>
 /// <param name="Result">結果</param>
 [MessagePackObject]
-public record QuestionResult([property: Key(0)] Guid Player, [property: Key(1)] string Question, [property: Key(2)] QuestionResultType Result) : IPlayerResult
-{
-    [IgnoreMember]
-    public PlayerResultType Type => PlayerResultType.Question;
-}
+public record QuestionResult([property: Key(0)] Guid Player, [property: Key(1)] string Question, [property: Key(2)] QuestionResultType Result) : IPlayerResult;
 
 /// <summary>
 /// 質問の結果タイプ
@@ -185,11 +161,7 @@ public enum QuestionResultType
 /// <param name="Answer">プレイヤーの解答</param>
 /// <param name="Result">結果</param>
 [MessagePackObject]
-public record AnswerResult([property: Key(0)] Guid Player, [property: Key(1)] string Answer, [property: Key(2)] AnswerResultType Result) : IPlayerResult
-{
-    [IgnoreMember]
-    public PlayerResultType Type => PlayerResultType.Answer;
-}
+public record AnswerResult([property: Key(0)] Guid Player, [property: Key(1)] string Answer, [property: Key(2)] AnswerResultType Result) : IPlayerResult;
 
 /// <summary>
 /// 解答の結果タイプ
@@ -235,12 +207,66 @@ public record Config(
 static class GameExtensions
 {
     /// <summary>
+    /// ボットのプレイヤーID
+    /// </summary>
+    public static readonly Guid BotId = Guid.Empty;
+
+    /// <summary>
     /// 正解者を取得する
     /// </summary>
     /// <param name="round">対象のラウンド</param>
     /// <returns>正解者一覧</returns>
     public static IEnumerable<Guid> GetCorrectPlayers(this Round round)
         => round.Histories
-            .Where(x => x.Result is AnswerResult answer && answer.Result == AnswerResultType.Correct)
-            .Select(x => x.Result.Player);
+            .Select(x => x.Result)
+            .OfType<AnswerResult>()
+            .Where(x => x.Result == AnswerResultType.Correct)
+            .Select(x => x.Player)
+            .Distinct();
+
+    /// <summary>
+    /// プレイヤーの質問数を取得する
+    /// </summary>
+    public static int CountQuestions(this Round round, Guid player)
+        => round.Histories.Select(h => h.Result).OfType<QuestionResult>().Count(h => h.Player == player);
+
+    /// <summary>
+    /// プレイヤーの解答数を取得する
+    /// </summary>
+    public static int CountAnswers(this Round round, Guid player)
+        => round.Histories.Select(h => h.Result).OfType<AnswerResult>().Count(h => h.Player == player);
+
+    /// <summary>
+    /// まだ出題されていないお題を取得する
+    /// </summary>
+    public static string[] GetRemainingTopics(this Game game)
+        => [.. game.Topics.Values.Distinct().Except(game.Rounds.Select(r => r.Topic))];
+
+    /// <summary>
+    /// ゲームとすべてのプレイヤーのシーンを変更する
+    /// </summary>
+    public static Game WithScene(this Game game, GameScene scene)
+        => game with
+        {
+            CurrentScene = scene,
+            Players = [.. game.Players.Select(p => p with { CurrentScene = scene })],
+        };
+
+    /// <summary>
+    /// 指定したプレイヤーを更新する
+    /// </summary>
+    public static Game UpdatePlayer(this Game game, Guid id, Func<Player, Player> update)
+        => game with { Players = [.. game.Players.Select(p => p.Id == id ? update(p) : p)] };
+
+    /// <summary>
+    /// 現在のラウンドを更新する
+    /// </summary>
+    public static Game UpdateCurrentRound(this Game game, Func<Round, Round> update)
+        => game with { Rounds = game.Rounds.SetItem(game.Rounds.Length - 1, update(game.Rounds[^1])) };
+
+    /// <summary>
+    /// 現在のラウンドに履歴を追加する
+    /// </summary>
+    public static Game AddHistory(this Game game, HistoryInfo history)
+        => game.UpdateCurrentRound(r => r with { Histories = r.Histories.Add(history) });
 }

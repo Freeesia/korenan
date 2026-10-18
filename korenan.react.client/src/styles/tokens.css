@@ -1,0 +1,64 @@
+:root {
+  --font-sans: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+  --color-bg: #242424;
+  --color-text: rgba(255, 255, 255, 0.87);
+  --color-text-muted: rgba(255, 255, 255, 0.6);
+  --color-surface: #333;
+  --color-surface-raised: #444;
+  --color-border: #555;
+  --color-button: #1a1a1a;
+  --color-accent: #646cff;
+  --color-accent-hover: #535bf2;
+  --color-accent-contrast: #ffffff;
+  --color-danger: #e5484d;
+  --color-overlay: rgba(50, 50, 50, 0.8);
+  --color-bubble: rgba(60, 60, 60, 0.9);
+  --color-bubble-text: #f0f0f0;
+  --color-bubble-own: rgba(100, 255, 150, 0.9);
+  --color-bubble-own-text: #1a1a1a;
+  --color-name: rgba(80, 80, 80, 0.8);
+  --color-name-own: rgba(100, 120, 80, 0.8);
+  --color-badge: rgba(30, 30, 30, 0.9);
+  --color-backdrop: rgba(30, 30, 30, 0.5);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 18px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --header-height: 56px;
+  --footer-height: 40px;
+  --content-max-width: 800px;
+  --layout-max-width: 1280px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #ffffff;
+    --color-text: #213547;
+    --color-text-muted: rgba(33, 53, 71, 0.65);
+    --color-surface: #f2f2f5;
+    --color-surface-raised: #e6e6ec;
+    --color-border: #d0d0d8;
+    --color-button: #f9f9f9;
+    --color-accent-hover: #747bff;
+    --color-overlay: rgba(255, 255, 255, 0.85);
+    --color-bubble: rgba(240, 240, 240, 0.95);
+    --color-bubble-text: #213547;
+    --color-name: rgba(220, 220, 225, 0.9);
+    --color-name-own: rgba(190, 230, 170, 0.9);
+    --color-badge: rgba(255, 255, 255, 0.95);
+    --color-backdrop: rgba(255, 255, 255, 0.55);
+  }
+}

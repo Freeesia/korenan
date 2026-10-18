@@ -1,135 +1,69 @@
-import { useState, useEffect } from "react";
-import { Config } from "../models";
+import { useActionState, useEffect, useState } from "react";
+import { api, errorMessage, type Config } from "../api/client";
+import { Button } from "../components/Button";
+import form from "../styles/form.module.css";
 
-function ConfigPage({ onClose }: { onClose: () => void }) {
-  const [config, setConfig] = useState<Config>({ questionLimit: 0, answerLimit: 0, correctPoint: 0, liarPoint: 0, noCorrectPoint: 0, inactivityThresholdMinutes: 0, aiQuestionThreshold: 0 });
+const FIELDS: { key: keyof Config; label: string; step?: number; min?: number; max?: number; scale?: number }[] = [
+  { key: "questionLimit", label: "質問回数の上限", min: 0 },
+  { key: "answerLimit", label: "解答回数の上限", min: 0 },
+  { key: "correctPoint", label: "正解時のポイント" },
+  { key: "liarPoint", label: "ライアーを当てたときのポイント" },
+  { key: "noCorrectPoint", label: "正解者なしのときのライアーのポイント" },
+  { key: "inactivityThresholdMinutes", label: "botが反応するまでの非アクティブ時間(分)", min: 0, step: 0.1 },
+  { key: "aiQuestionThreshold", label: "AI質問開始の閾値(%)", min: 0, max: 100, scale: 100 },
+];
+
+function ConfigForm({ onClose }: { onClose: () => void }) {
+  const [config, setConfig] = useState<Config>();
 
   useEffect(() => {
-    fetchConfig();
+    const fetchConfig = async () => {
+      const { data } = await api.GET("/api/config");
+      setConfig(data);
+    };
+    void fetchConfig();
   }, []);
 
-  const fetchConfig = async () => {
-    const response = await fetch("/api/config");
-    const data: Config = await response.json();
-    setConfig(data);
-  };
-
-  const updateConfig = async () => {
-    const response = await fetch("/api/config", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(config),
-    });
-    if (response.ok) {
-      onClose();
+  const [error, formAction, isPending] = useActionState(async (_: string | undefined, formData: FormData) => {
+    const body = Object.fromEntries(FIELDS.map((f) => [f.key, Number(formData.get(f.key)) / (f.scale ?? 1)])) as unknown as Config;
+    const { error } = await api.POST("/api/config", { body });
+    if (error) {
+      return errorMessage(error, "設定の更新に失敗しました");
     }
-  };
+    onClose();
+    return undefined;
+  }, undefined);
+
+  if (!config) {
+    return <p>読み込み中…</p>;
+  }
 
   return (
-    <div>
-      <h1>Config</h1>
-      <div>
-        <label>
-          Question Limit:
+    <form action={formAction} className={form.form}>
+      {FIELDS.map((f) => (
+        <label key={f.key} className={form.field}>
+          <span className={form.label}>{f.label}</span>
           <input
+            className={form.input}
             type="number"
-            disabled={!config}
-            value={config?.questionLimit}
-            onChange={(e) =>
-              setConfig({ ...config!, questionLimit: Number(e.target.value) })
-            }
+            name={f.key}
+            min={f.min}
+            max={f.max}
+            step={f.step ?? 1}
+            defaultValue={Math.round(config[f.key] * (f.scale ?? 1) * 100) / 100}
+            required
           />
         </label>
+      ))}
+      {error && <p className={form.error}>{error}</p>}
+      <div className={form.actions}>
+        <Button onClick={onClose}>キャンセル</Button>
+        <Button type="submit" variant="primary" disabled={isPending}>
+          保存
+        </Button>
       </div>
-      <div>
-        <label>
-          Answer Limit:
-          <input
-            type="number"
-            disabled={!config}
-            value={config?.answerLimit}
-            onChange={(e) =>
-              setConfig({ ...config!, answerLimit: Number(e.target.value) })
-            }
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Correct Point:
-          <input
-            type="number"
-            disabled={!config}
-            value={config?.correctPoint}
-            onChange={(e) =>
-              setConfig({ ...config!, correctPoint: Number(e.target.value) })
-            }
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Liar Point:
-          <input
-            type="number"
-            disabled={!config}
-            value={config?.liarPoint}
-            onChange={(e) =>
-              setConfig({ ...config!, liarPoint: Number(e.target.value) })
-            }
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          No Correct Point:
-          <input
-            type="number"
-            disabled={!config}
-            value={config?.noCorrectPoint}
-            onChange={(e) =>
-              setConfig({ ...config!, noCorrectPoint: Number(e.target.value) })
-            }
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          botが反応するまでの非アクティブ時間(分):
-          <input
-            type="number"
-            disabled={!config}
-            min="0"
-            step="0.1"
-            value={config?.inactivityThresholdMinutes}
-            onChange={(e) =>
-              setConfig({ ...config!, inactivityThresholdMinutes: Number(e.target.value) })
-            }
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          AI質問開始の閾値(%):
-          <input
-            type="number"
-            disabled={!config}
-            min="0"
-            max="100"
-            step="1"
-            value={config ? Math.round(config.aiQuestionThreshold * 100) : 0}
-            onChange={(e) =>
-              setConfig({ ...config!, aiQuestionThreshold: Number(e.target.value) / 100 })
-            }
-          />
-        </label>
-      </div>
-      <button onClick={updateConfig}>Update Config</button>
-      <button onClick={onClose}>閉じる</button>
-    </div>
+    </form>
   );
 }
 
-export default ConfigPage;
+export default ConfigForm;

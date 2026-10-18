@@ -1,75 +1,64 @@
-import { useContext, useState, useEffect } from "react";
-import { UserContext, TitleContext, SceneContext } from "../App";
-import { useNavigate } from "react-router-dom";
+import { useActionState } from "react";
+import { api, errorMessage } from "../api/client";
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
+import { useGame, usePageTitle } from "../context/game";
+import form from "../styles/form.module.css";
+import page from "../styles/page.module.css";
+
+interface FormState {
+  error?: string;
+  name: string;
+  theme: string;
+  aikotoba: string;
+}
 
 function CreateRoom() {
-  const [, startFetchingScene] = useContext(SceneContext);
-  const [user, setUser] = useContext(UserContext);
-  const [, setPageTitle] = useContext(TitleContext);
-  const [name, setName] = useState(user?.name || "");
-  const [aikotoba, setAikotoba] = useState("");
-  const [theme, setTheme] = useState("");
-  const navigate = useNavigate();
+  const { user, setUser, reconnect } = useGame();
+  usePageTitle("ルーム作成");
 
-  useEffect(() => {
-    setPageTitle("ルーム作成");
-
-    // ユーザーコンテキストに値がある場合はユーザー名を更新
-    if (user?.name && !name) {
-      setName(user.name);
-    }
-  }, [setPageTitle, user, name]);
-
-  const createRoom = async () => {
-    const response = await fetch("/api/createRoom", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, aikotoba, theme }),
-    });
-
-    if (!response.ok) {
-      alert("ルーム作成に失敗しました");
-      return;
-    }
-
-    const data = await response.json();
-    setUser(data);
-    await startFetchingScene();
-    navigate("/RegisterTopic");
-  };
-
-  const isFormValid = name && aikotoba && theme;
+  const [state, formAction, isPending] = useActionState(
+    async (_: FormState, formData: FormData): Promise<FormState> => {
+      const values = {
+        name: String(formData.get("name") ?? ""),
+        theme: String(formData.get("theme") ?? ""),
+        aikotoba: String(formData.get("aikotoba") ?? ""),
+      };
+      const { data, error } = await api.POST("/api/createRoom", { body: values });
+      if (!data) {
+        return { ...values, error: errorMessage(error, "ルーム作成に失敗しました") };
+      }
+      setUser(data);
+      reconnect();
+      return values;
+    },
+    { name: user?.name ?? "", theme: "", aikotoba: "" },
+  );
 
   return (
-    <div>
-      <div>
-        <label>プレイヤー名を入力してください:</label>
-        <div>
-          <input type="text" id="username" placeholder="プレイヤー名" autoComplete="on" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-      </div>
-
-      <div>
-        <label>テーマを設定してください:</label>
-        <div>
-          <input type="text" id="theme" placeholder="テーマ（例: 動物、食べ物、映画）" value={theme} onChange={(e) => setTheme(e.target.value)} />
-        </div>
-        <p>テーマの例: 「動物」「食べ物」「スポーツ選手」「映画」など</p>
-      </div>
-
-      <div>
-        <label>あいことばを設定してください:</label>
-        <div>
-          <input type="text" id="aikotoba" placeholder="あいことば" autoComplete="on" value={aikotoba} onChange={(e) => setAikotoba(e.target.value)} />
-        </div>
-        <p>このあいことばを友達に教えて、同じゲームに参加してもらいましょう</p>
-      </div>
-
-      <button onClick={createRoom} disabled={!isFormValid}>
-        ルーム作成
-      </button>
+    <div className={page.page}>
+      <Card>
+        <form key={user?.id} action={formAction} className={form.form}>
+          <label className={form.field}>
+            <span className={form.label}>プレイヤー名</span>
+            <input className={form.input} name="name" placeholder="プレイヤー名" autoComplete="nickname" defaultValue={state.name || user?.name} required />
+          </label>
+          <label className={form.field}>
+            <span className={form.label}>テーマ</span>
+            <input className={form.input} name="theme" placeholder="テーマ（例: 動物、食べ物、映画）" defaultValue={state.theme} required />
+            <span className={form.hint}>テーマの例: 「動物」「食べ物」「スポーツ選手」「映画」など</span>
+          </label>
+          <label className={form.field}>
+            <span className={form.label}>あいことば</span>
+            <input className={form.input} name="aikotoba" placeholder="あいことば" autoComplete="off" defaultValue={state.aikotoba} required />
+            <span className={form.hint}>このあいことばを友達に教えて、同じゲームに参加してもらいましょう</span>
+          </label>
+          {state.error && <p className={form.error}>{state.error}</p>}
+          <Button type="submit" variant="primary" block disabled={isPending}>
+            {isPending ? "作成中…" : "ルーム作成"}
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

@@ -1,0 +1,23 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.inline {
+  font-size: 1.25rem;
+}
+
+.floating {
+  position: absolute;
+  bottom: -20px;
+  right: -8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-badge);
+  box-shadow: var(--shadow-md);
+}

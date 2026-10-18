@@ -1,0 +1,1042 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "korenan.ApiService | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/createRoom": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/joinRoom": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinRoomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topic": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/start": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/question": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionResultType"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/{room}/round/{i}/history": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "parameters": [
+          {
+            "name": "room",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "i",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IPlayerResult"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/{room}/round/{i}/history/internal": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "parameters": [
+          {
+            "name": "room",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "i",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryInfo"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/answer": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerResultType"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/guess": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/ban": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/scene": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentScene"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameScene"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/scene/stream": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/SseItemOfCurrentScene"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/reset": {
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Config"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/image/bot/{room}": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "parameters": [
+          {
+            "name": "room",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/wiki": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gen-image": {
+      "get": {
+        "tags": [
+          "korenan.ApiService"
+        ],
+        "parameters": [
+          {
+            "name": "theme",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnswerResultType": {
+        "enum": [
+          "Correct",
+          "MoreSpecific",
+          "Incorrect"
+        ]
+      },
+      "Config": {
+        "type": "object",
+        "properties": {
+          "questionLimit": {
+            "type": "integer",
+            "format": "int32",
+            "default": 8
+          },
+          "answerLimit": {
+            "type": "integer",
+            "format": "int32",
+            "default": 3
+          },
+          "correctPoint": {
+            "type": "integer",
+            "format": "int32",
+            "default": 20
+          },
+          "liarPoint": {
+            "type": "integer",
+            "format": "int32",
+            "default": 30
+          },
+          "noCorrectPoint": {
+            "type": "integer",
+            "format": "int32",
+            "default": -10
+          },
+          "inactivityThresholdMinutes": {
+            "type": "number",
+            "format": "float",
+            "default": 0.5
+          },
+          "aiQuestionThreshold": {
+            "type": "number",
+            "format": "float",
+            "default": 0.5
+          }
+        }
+      },
+      "CreateRoomRequest": {
+        "required": [
+          "name",
+          "aikotoba",
+          "theme"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "aikotoba": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string"
+          }
+        }
+      },
+      "CurrentScene": {
+        "required": [
+          "id",
+          "aikotoba",
+          "theme",
+          "scene",
+          "round",
+          "hostId",
+          "players",
+          "info"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "aikotoba": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string"
+          },
+          "scene": {
+            "$ref": "#/components/schemas/GameScene"
+          },
+          "round": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hostId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "players": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Player"
+            }
+          },
+          "info": {
+            "$ref": "#/components/schemas/ISceneInfo"
+          }
+        }
+      },
+      "GameScene": {
+        "enum": [
+          "RegisterTopic",
+          "WaitRoundStart",
+          "TopicSelecting",
+          "QuestionAnswering",
+          "LiarGuess",
+          "GameEnd"
+        ]
+      },
+      "HistoryInfo": {
+        "required": [
+          "result",
+          "reason",
+          "postedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/IPlayerResult"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "IPlayerResult": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/IPlayerResultQuestionResult"
+          },
+          {
+            "$ref": "#/components/schemas/IPlayerResultAnswerResult"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "Question": "#/components/schemas/IPlayerResultQuestionResult",
+            "Answer": "#/components/schemas/IPlayerResultAnswerResult"
+          }
+        }
+      },
+      "IPlayerResultAnswerResult": {
+        "required": [
+          "player",
+          "answer",
+          "result",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "Answer"
+            ],
+            "type": "string"
+          },
+          "player": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AnswerResultType"
+          }
+        }
+      },
+      "IPlayerResultQuestionResult": {
+        "required": [
+          "player",
+          "question",
+          "result",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "Question"
+            ],
+            "type": "string"
+          },
+          "player": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "question": {
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/QuestionResultType"
+          }
+        }
+      },
+      "ISceneInfo": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/ISceneInfoEmptySceneInfo"
+          },
+          {
+            "$ref": "#/components/schemas/ISceneInfoWaitRoundSceneInfo"
+          },
+          {
+            "$ref": "#/components/schemas/ISceneInfoTopicSelectingSceneInfo"
+          },
+          {
+            "$ref": "#/components/schemas/ISceneInfoQuestionAnsweringSceneInfo"
+          },
+          {
+            "$ref": "#/components/schemas/ISceneInfoLiarGuessSceneInfo"
+          },
+          {
+            "$ref": "#/components/schemas/ISceneInfoGameEndInfo"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "Empty": "#/components/schemas/ISceneInfoEmptySceneInfo",
+            "WaitRound": "#/components/schemas/ISceneInfoWaitRoundSceneInfo",
+            "TopicSelecting": "#/components/schemas/ISceneInfoTopicSelectingSceneInfo",
+            "QuestionAnswering": "#/components/schemas/ISceneInfoQuestionAnsweringSceneInfo",
+            "LiarGuess": "#/components/schemas/ISceneInfoLiarGuessSceneInfo",
+            "GameEnd": "#/components/schemas/ISceneInfoGameEndInfo"
+          }
+        }
+      },
+      "ISceneInfoEmptySceneInfo": {
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "Empty"
+            ],
+            "type": "string"
+          }
+        }
+      },
+      "ISceneInfoGameEndInfo": {
+        "required": [
+          "results",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "GameEnd"
+            ],
+            "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoundResult"
+            }
+          }
+        }
+      },
+      "ISceneInfoLiarGuessSceneInfo": {
+        "required": [
+          "topic",
+          "topicCorrectPlayers",
+          "guessedPlayers",
+          "histories",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "LiarGuess"
+            ],
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "topicCorrectPlayers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "guessedPlayers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "histories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryInfo"
+            }
+          }
+        }
+      },
+      "ISceneInfoQuestionAnsweringSceneInfo": {
+        "required": [
+          "histories",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "QuestionAnswering"
+            ],
+            "type": "string"
+          },
+          "histories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IPlayerResult"
+            }
+          }
+        }
+      },
+      "ISceneInfoTopicSelectingSceneInfo": {
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "TopicSelecting"
+            ],
+            "type": "string"
+          }
+        }
+      },
+      "ISceneInfoWaitRoundSceneInfo": {
+        "required": [
+          "waiting",
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "WaitRound"
+            ],
+            "type": "string"
+          },
+          "waiting": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "JoinRoomRequest": {
+        "required": [
+          "name",
+          "aikotoba"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "aikotoba": {
+            "type": "string"
+          }
+        }
+      },
+      "Player": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currentScene": {
+            "$ref": "#/components/schemas/GameScene"
+          },
+          "points": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
+      "QuestionResultType": {
+        "enum": [
+          "Yes",
+          "No",
+          "Unanswerable"
+        ]
+      },
+      "RoundResult": {
+        "required": [
+          "topic",
+          "topicCorrectPlayers",
+          "liarPlayers",
+          "liarCorrectPlayers"
+        ],
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string"
+          },
+          "topicCorrectPlayers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "liarPlayers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "liarCorrectPlayers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "SseItemOfCurrentScene": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CurrentScene"
+          },
+          "eventType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "eventId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reconnectionInterval": {
+            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "User": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "korenan.ApiService"
+    }
+  ]
+}

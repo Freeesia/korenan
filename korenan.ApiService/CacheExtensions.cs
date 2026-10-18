@@ -13,10 +13,8 @@ public static class CacheExtensions
 
     public static async ValueTask Set<T>(this IBufferDistributedCache cache, string key, T data, CancellationToken token = default)
     {
-        using var buffer = new ArrayPoolBufferWriter<byte>();
-        MessagePackSerializer.Serialize(buffer, data, serializeOptions, token);
         using var _ = await locker.LockAsync(key, token);
-        await cache.SetAsync(key, new(buffer.WrittenMemory), defaultOptions, token);
+        await cache.SetCore(key, data, token);
     }
 
     public static async ValueTask<T> Update<T>(this IBufferDistributedCache cache, string key, Func<T, T> update, CancellationToken token = default)
@@ -24,20 +22,7 @@ public static class CacheExtensions
         using var _ = await locker.LockAsync(key, token);
         var data = await cache.Get<T>(key, token) ?? throw new InvalidOperationException("Cache data not found");
         data = update(data);
-        using var buffer = new ArrayPoolBufferWriter<byte>();
-        MessagePackSerializer.Serialize(buffer, data, serializeOptions, token);
-        await cache.SetAsync(key, new(buffer.WrittenMemory), defaultOptions, token);
-        return data;
-    }
-
-    public static async ValueTask<T> Update<T>(this IBufferDistributedCache cache, string key, Action<T> update, CancellationToken token = default)
-    {
-        using var _ = await locker.LockAsync(key, token);
-        var data = await cache.Get<T>(key, token) ?? throw new InvalidOperationException("Cache data not found");
-        update(data);
-        using var buffer = new ArrayPoolBufferWriter<byte>();
-        MessagePackSerializer.Serialize(buffer, data, serializeOptions, token);
-        await cache.SetAsync(key, new(buffer.WrittenMemory), defaultOptions, token);
+        await cache.SetCore(key, data, token);
         return data;
     }
 
@@ -49,5 +34,12 @@ public static class CacheExtensions
             return default;
         }
         return MessagePackSerializer.Deserialize<T>(buffer.WrittenMemory, serializeOptions, token);
+    }
+
+    private static async ValueTask SetCore<T>(this IBufferDistributedCache cache, string key, T data, CancellationToken token)
+    {
+        using var buffer = new ArrayPoolBufferWriter<byte>();
+        MessagePackSerializer.Serialize(buffer, data, serializeOptions, token);
+        await cache.SetAsync(key, new(buffer.WrittenMemory), defaultOptions, token);
     }
 }

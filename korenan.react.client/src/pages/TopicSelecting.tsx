@@ -1,22 +1,19 @@
-import { useEffect, useState, useContext } from "react";
-import { TitleContext } from "../App";
+import { usePageTitle } from "../context/game";
+import page from "../styles/page.module.css";
+import styles from "./TopicSelecting.module.css";
 
 function TopicSelecting() {
-  const [dots, setDots] = useState("");
-  const [, setPageTitle] = useContext(TitleContext);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((prev) => (prev.length < 3 ? prev + "." : ""));
-    }, 500);
-
-    setPageTitle("お題抽選中");
-    return () => clearInterval(interval);
-  }, [setPageTitle]);
+  usePageTitle("お題抽選中");
 
   return (
-    <div className="container">
-      <h1 className="title">お題抽選中{dots}</h1>
+    <div className={`${page.page} ${styles.container}`}>
+      <div className={styles.spinner} aria-hidden>
+        🎲
+      </div>
+      <h1 className={styles.title}>
+        お題抽選中<span className={styles.dots} />
+      </h1>
+      <p className={page.lead}>AIがお題について調べています。しばらくお待ちください。</p>
     </div>
   );
 }

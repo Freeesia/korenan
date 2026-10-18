@@ -1,53 +1,43 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>1d2c3151-5ec1-4cef-9902-fd918ab2f16c</UserSecretsId>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <DockerfileContext>..\..</DockerfileContext>
-    <SpaRoot>..\korenan.react.client</SpaRoot>
-    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
-    <SpaProxyServerUrl>https://localhost:5173</SpaProxyServerUrl>
     <RootNamespace>Korenan.ApiService</RootNamespace>
+    <NoWarn>$(NoWarn);MEAI001;OPENAI001</NoWarn>
+    <OpenApiGenerateDocumentsOnBuild Condition="'$(OpenApiGenerateDocumentsOnBuild)' == ''">false</OpenApiGenerateDocumentsOnBuild>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/../korenan.react.client/openapi</OpenApiDocumentsDirectory>
   </PropertyGroup>
-
-  <ItemGroup Condition="'$(Condition)' == 'Debug'">
-    <PackageReference Include="Bogus" Version="35.6.0" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
-    <PackageReference Include="Google_GenerativeAI.Web" Version="3.6.7" />
+    <PackageReference Include="Google.GenAI" Version="1.26.1" />
     <PackageReference Include="MessagePack" Version="3.1.12" />
     <PackageReference Include="MessagePackAnalyzer" Version="3.1.12">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
-      <Version>8.*-*</Version>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.11.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.0" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.13">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.12" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.18.0" />
     <PackageReference Include="CXuesong.MW.MwParserFromScratch" Version="0.2.1" />
     <PackageReference Include="Genbox.Wikipedia" Version="4.0.0" />
-    <PackageReference Include="GoogleTrendsApi" Version="2.3.5" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.64.0-alpha" />
-    <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.64.0-preview" />
-    <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" Version="1.64.0-alpha" />
     <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.1" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="ai_character01_smile.png" />
+    <EmbeddedResource Include="Prompts/*.md" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\korenan.ServiceDefaults\korenan.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\korenan.react.client\korenan.react.client.esproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
   </ItemGroup>
 </Project>
