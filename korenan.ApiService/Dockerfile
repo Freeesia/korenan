@@ -1,7 +1,7 @@
 FROM node:24-slim AS client
 WORKDIR /src/korenan.react.client
 COPY korenan.react.client/package.json korenan.react.client/package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 COPY korenan.react.client/ ./
 ARG VITE_SENTRY_DSN
 ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
