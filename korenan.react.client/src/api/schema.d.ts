@@ -816,6 +816,8 @@ export interface components {
              * @default 0.5
              */
             aiQuestionThreshold: number;
+            /** @default false */
+            notifyLiar: boolean;
         };
         CreateRoomRequest: {
             name: string;
@@ -881,6 +883,7 @@ export interface components {
             /** @enum {string} */
             type: "QuestionAnswering";
             histories: components["schemas"]["IPlayerResult"][];
+            isLiar: boolean;
         };
         ISceneInfoTopicSelectingSceneInfo: {
             /** @enum {string} */

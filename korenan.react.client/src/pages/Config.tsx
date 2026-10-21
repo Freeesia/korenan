@@ -3,7 +3,7 @@ import { api, errorMessage, type Config } from "../api/client";
 import { Button } from "../components/Button";
 import form from "../styles/form.module.css";
 
-const FIELDS: { key: keyof Config; label: string; step?: number; min?: number; max?: number; scale?: number }[] = [
+const FIELDS: { key: Exclude<keyof Config, "notifyLiar">; label: string; step?: number; min?: number; max?: number; scale?: number }[] = [
   { key: "questionLimit", label: "質問回数の上限", min: 0 },
   { key: "answerLimit", label: "解答回数の上限", min: 0 },
   { key: "correctPoint", label: "正解時のポイント" },
@@ -25,7 +25,10 @@ function ConfigForm({ onClose }: { onClose: () => void }) {
   }, []);
 
   const [error, formAction, isPending] = useActionState(async (_: string | undefined, formData: FormData) => {
-    const body = Object.fromEntries(FIELDS.map((f) => [f.key, Number(formData.get(f.key)) / (f.scale ?? 1)])) as unknown as Config;
+    const body = {
+      ...Object.fromEntries(FIELDS.map((f) => [f.key, Number(formData.get(f.key)) / (f.scale ?? 1)])),
+      notifyLiar: formData.get("notifyLiar") === "on",
+    } as Config;
     const { error } = await api.POST("/api/config", { body });
     if (error) {
       return errorMessage(error, "設定の更新に失敗しました");
@@ -55,6 +58,10 @@ function ConfigForm({ onClose }: { onClose: () => void }) {
           />
         </label>
       ))}
+      <label className={form.checkbox}>
+        <input type="checkbox" name="notifyLiar" defaultChecked={config.notifyLiar} />
+        <span className={form.label}>ラウンド開始時にライアーへ通知する</span>
+      </label>
       {error && <p className={form.error}>{error}</p>}
       <div className={form.actions}>
         <Button onClick={onClose}>キャンセル</Button>

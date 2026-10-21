@@ -208,7 +208,7 @@ static async Task<Game> PrepareRound(GameStore store, GameAi ai, Game game, Canc
         token);
 }
 
-static CurrentScene ToCurrentScene(Game game) => new(
+static CurrentScene ToCurrentScene(Game game, Guid userId) => new(
     game.Id,
     game.Aikotoba,
     game.Theme,
@@ -223,7 +223,9 @@ static CurrentScene ToCurrentScene(Game game) => new(
         { CurrentScene: GameScene.TopicSelecting }
             => new TopicSelectingSceneInfo(),
         { CurrentScene: GameScene.QuestionAnswering, Rounds: [.., var round] }
-            => new QuestionAnsweringSceneInfo([.. round.Histories.Select(h => h.Result)]),
+            => new QuestionAnsweringSceneInfo(
+                [.. round.Histories.Select(h => h.Result)],
+                game.Config.NotifyLiar && round.Liars.Contains(userId)),
         { CurrentScene: GameScene.LiarGuess, Rounds: [.., var round] }
             => new LiarGuessSceneInfo(
                 round.Topic,
@@ -257,7 +259,7 @@ static async IAsyncEnumerable<SseItem<CurrentScene?>> StreamScene(User? user, Ga
             yield return new(null, "none");
             yield break;
         }
-        yield return new(ToCurrentScene(game), "scene");
+        yield return new(ToCurrentScene(game, user.Id), "scene");
 
         while (!token.IsCancellationRequested && await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(15), token)) != pending)
         {
@@ -530,8 +532,8 @@ api.MapPost("/ban", async Task<Results<Ok, ProblemHttpResult>> (HttpContext cont
 
 // シーン情報取得
 api.MapGet("/scene", async Task<Results<Ok<CurrentScene>, NotFound>> (HttpContext context, GameStore store)
-    => await GetPlayerContext(context, store) is { Game: var game }
-        ? TypedResults.Ok(ToCurrentScene(game))
+    => await GetPlayerContext(context, store) is { User: var user, Game: var game }
+        ? TypedResults.Ok(ToCurrentScene(game, user.Id))
         : TypedResults.NotFound());
 
 // シーン情報の購読
@@ -618,7 +620,7 @@ interface ISceneInfo;
 
 record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
 record TopicSelectingSceneInfo() : ISceneInfo;
-record QuestionAnsweringSceneInfo(IPlayerResult[] Histories) : ISceneInfo;
+record QuestionAnsweringSceneInfo(IPlayerResult[] Histories, bool IsLiar) : ISceneInfo;
 record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] GuessedPlayers, HistoryInfo[] Histories) : ISceneInfo;
 record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
