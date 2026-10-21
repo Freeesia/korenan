@@ -578,6 +578,10 @@
             "type": "number",
             "format": "float",
             "default": 0.5
+          },
+          "notifyLiar": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -860,6 +864,7 @@
       "ISceneInfoQuestionAnsweringSceneInfo": {
         "required": [
           "histories",
+          "isLiar",
           "type"
         ],
         "properties": {
@@ -874,6 +879,9 @@
             "items": {
               "$ref": "#/components/schemas/IPlayerResult"
             }
+          },
+          "isLiar": {
+            "type": "boolean"
           }
         }
       },

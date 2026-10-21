@@ -194,6 +194,7 @@ public enum AnswerResultType
 /// <param name="NoCorrectPoint">正解者がいなかったときのポイント</param>
 /// <param name="InactivityThresholdMinutes">AI自動質問の非活動閾値（分）</param>
 /// <param name="AiQuestionThreshold">AI質問開始の閾値係数</param>
+/// <param name="NotifyLiar">ラウンド開始時にライアープレイヤーへライアーであることを通知するか</param>
 [MessagePackObject]
 public record Config(
     [property: Key(0)] int QuestionLimit = 8,
@@ -202,7 +203,8 @@ public record Config(
     [property: Key(3)] int LiarPoint = 30,
     [property: Key(4)] int NoCorrectPoint = -10,
     [property: Key(5)] float InactivityThresholdMinutes = 0.5f,
-    [property: Key(6)] float AiQuestionThreshold = 0.5f);
+    [property: Key(6)] float AiQuestionThreshold = 0.5f,
+    [property: Key(7)] bool NotifyLiar = false);
 
 static class GameExtensions
 {

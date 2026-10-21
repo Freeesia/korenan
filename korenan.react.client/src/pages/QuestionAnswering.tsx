@@ -84,7 +84,8 @@ function QuestionAnswering() {
   const endRef = useRef<HTMLDivElement>(null);
   usePageTitle("質問タイム");
 
-  const histories = sceneInfoOf(scene, "QuestionAnswering")?.histories ?? [];
+  const info = sceneInfoOf(scene, "QuestionAnswering");
+  const histories = info?.histories ?? [];
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -127,6 +128,7 @@ function QuestionAnswering() {
           お題が分かったら、「解答」で答えてみてね！
         </p>
         <h3>テーマ: 「{scene?.theme}」</h3>
+        {info?.isLiar && <p className={styles.liar}>🤫 このラウンドのお題はあなたが登録したものです。ライアーだとバレないように振る舞おう！</p>}
       </Card>
       <ul className={styles.timeline}>
         {histories.map((history, index) => (
