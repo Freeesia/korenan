@@ -3,6 +3,7 @@ import { api, errorMessage, sceneInfoOf } from "../api/client";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Dialog } from "../components/Dialog";
+import { InviteCard } from "../components/InviteCard";
 import { PlayerList } from "../components/PlayerList";
 import { useGame, useIsHost, usePageTitle, usePlayerName } from "../context/game";
 import form from "../styles/form.module.css";
@@ -25,33 +26,13 @@ function WaitRoundStart() {
     return error ? errorMessage(error, "ラウンドを開始できませんでした") : undefined;
   }, undefined);
 
-  const shareAikotoba = async () => {
-    const url = `${window.location.origin}/JoinRoom?aikotoba=${encodeURIComponent(scene?.aikotoba ?? "")}`;
-    if (navigator.share) {
-      await navigator.share({
-        title: "これなんに招待",
-        text: `一緒に遊ぼう！合言葉: ${scene?.aikotoba}\nこちらのURLから参加してね:`,
-        url,
-      });
-      return;
-    }
-    await navigator.clipboard.writeText(url);
-    alert("招待URLをクリップボードにコピーしました。");
-  };
-
   return (
     <div className={page.page}>
       <Card variant="translucent">
         <span className={styles.caption}>テーマ</span>
         <h2 className={page.heading}>「{scene?.theme}」</h2>
       </Card>
-      <Card title="あいことば">
-        <div className={styles.aikotoba}>
-          <span className={styles.code}>{scene?.aikotoba}</span>
-          <Button onClick={shareAikotoba}>共有</Button>
-        </div>
-        <p className={form.hint}>あいことばを共有して、みんなで同じゲームに参加しよう！</p>
-      </Card>
+      <InviteCard />
       <div className={page.mobileOnly}>
         <Card title={`参加プレイヤー (${waiting}/${total} 準備完了)`}>
           <PlayerList />

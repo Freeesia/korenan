@@ -2,6 +2,7 @@ import { useActionState } from "react";
 import { api, errorMessage } from "../api/client";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { InviteCard } from "../components/InviteCard";
 import { PlayerList } from "../components/PlayerList";
 import { useGame, usePageTitle } from "../context/game";
 import form from "../styles/form.module.css";
@@ -35,6 +36,7 @@ function RegisterTopic() {
           </Button>
         </form>
       </Card>
+      <InviteCard />
       <div className={page.mobileOnly}>
         <Card title="参加プレイヤー">
           <PlayerList />
