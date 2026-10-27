@@ -12,7 +12,7 @@
     "gen:api": "openapi-typescript openapi/korenan.ApiService.json -o src/api/schema.d.ts"
   },
   "dependencies": {
-    "@sentry/react": "^11.8.0",
+    "@sentry/react": "^11.9.0",
     "openapi-fetch": "^0.17.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
