@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
-    <PackageReference Include="Google.GenAI" Version="1.26.1" />
+    <PackageReference Include="Google.GenAI" Version="1.27.0" />
     <PackageReference Include="MessagePack" Version="3.1.12" />
     <PackageReference Include="MessagePackAnalyzer" Version="3.1.12">
       <PrivateAssets>all</PrivateAssets>
