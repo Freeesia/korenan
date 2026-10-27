@@ -29,7 +29,7 @@
     <PackageReference Include="Scalar.AspNetCore" Version="2.18.0" />
     <PackageReference Include="CXuesong.MW.MwParserFromScratch" Version="0.2.1" />
     <PackageReference Include="Genbox.Wikipedia" Version="4.0.0" />
-    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.1" />
+    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.4" />
   </ItemGroup>
 
   <ItemGroup>
