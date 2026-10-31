@@ -6,5 +6,8 @@ export function transitionTo(navigate: NavigateFunction, path: string) {
     void navigate(path);
     return;
   }
-  document.startViewTransition(() => flushSync(() => void navigate(path)));
+  const transition = document.startViewTransition(() => flushSync(() => void navigate(path)));
+  // 次のシーンでアニメーションが中断されても、画面更新は完了する。
+  // readyの拒否を未処理にせず、更新処理の例外はupdateCallbackDone・finishedに残す。
+  void transition.ready.catch(() => {});
 }

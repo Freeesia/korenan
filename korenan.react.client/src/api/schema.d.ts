@@ -899,6 +899,12 @@ export interface components {
             name: string;
             aikotoba: string;
         };
+        LiarGuess: {
+            /** Format: uuid */
+            player: string;
+            /** Format: uuid */
+            target: string;
+        };
         Player: {
             /** Format: uuid */
             id: string;
@@ -917,6 +923,21 @@ export interface components {
             topicCorrectPlayers: string[];
             liarPlayers: string[];
             liarCorrectPlayers: string[];
+            scores: components["schemas"]["RoundScore"][];
+            histories: components["schemas"]["HistoryInfo"][];
+            liarGuesses: components["schemas"]["LiarGuess"][];
+        };
+        RoundScore: {
+            /** Format: uuid */
+            player: string;
+            /** Format: int32 */
+            topicPoints: number;
+            /** Format: int32 */
+            liarPoints: number;
+            /** Format: int32 */
+            noCorrectPoints: number;
+            /** Format: int32 */
+            total?: number;
         };
         SseItemOfCurrentScene: {
             data?: components["schemas"]["CurrentScene"];

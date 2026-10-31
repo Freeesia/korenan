@@ -1,4 +1,4 @@
-import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import useSound from "use-sound";
 import { api, errorMessage, sceneInfoOf, type Config } from "../api/client";
 import notificationSound from "../assets/決定ボタンを押す52.mp3";
@@ -20,26 +20,34 @@ interface InputRowProps {
 
 function InputRow({ name, placeholder, label, remaining, submit }: InputRowProps) {
   const [text, setText] = useState("");
-  const [error, dispatch, isPending] = useActionState(async (_: string | undefined, value: string) => {
-    const result = await submit(value);
-    if (!result) {
-      setText("");
-    }
-    return result;
-  }, undefined);
+  const [error, setError] = useState<string>();
+  const [isPending, setIsPending] = useState(false);
+  const submitting = useRef(false);
   const disabled = isPending || remaining <= 0;
 
-  const send = (value: string) => {
-    if (value.trim() === "" || disabled) {
+  const send = async (value: string) => {
+    if (value.trim() === "" || disabled || submitting.current) {
       return;
     }
-    startTransition(() => dispatch(value));
+    submitting.current = true;
+    setIsPending(true);
+    setError(undefined);
+    try {
+      const result = await submit(value);
+      setError(result);
+      if (!result) setText("");
+    } catch {
+      setError("通信に失敗しました。接続を確認して再送してください。");
+    } finally {
+      submitting.current = false;
+      setIsPending(false);
+    }
   };
 
   const speech = useSpeechRecognition((transcript, isFinal) => {
     setText(transcript);
     if (isFinal) {
-      send(transcript);
+      void send(transcript);
     }
   });
 
@@ -48,12 +56,14 @@ function InputRow({ name, placeholder, label, remaining, submit }: InputRowProps
       className={styles.row}
       onSubmit={(e) => {
         e.preventDefault();
-        send(text);
+        speech.cancel();
+        void send(text);
       }}
     >
       <input
         className={styles.input}
         name={name}
+        aria-label={label}
         type="text"
         placeholder={isPending ? "AIが考え中…" : placeholder}
         autoComplete="off"
@@ -65,13 +75,31 @@ function InputRow({ name, placeholder, label, remaining, submit }: InputRowProps
         {label}
       </Button>
       {speech.supported && (
-        <Button size="sm" variant="ghost" onClick={speech.start} disabled={disabled || speech.listening} aria-label="音声入力">
+        <Button size="sm" variant="ghost" onClick={speech.listening ? speech.stop : speech.start} disabled={disabled} aria-label={speech.listening ? "音声入力を停止" : `${label}を音声入力`} aria-pressed={speech.listening}>
           {speech.listening ? "👂" : "🎙️"}
         </Button>
       )}
       <span className={styles.remaining}>残り{Math.max(remaining, 0)}回</span>
-      {error && <p className={styles.error}>{error}</p>}
+      {isPending && (
+        <p className={styles.pending} role="status">
+          AIが{label === "質問" ? "回答" : "判定"}中
+          <span className={styles.dots} aria-hidden><span>●</span><span>●</span><span>●</span></span>
+        </p>
+      )}
+      {!speech.supported && name === "question" && <p className={styles.hint}>このブラウザーは音声認識に対応していません。iPhoneではSafariかキーボードの音声入力をご利用ください。</p>}
+      {(error || speech.error) && <p className={styles.error} role="alert">{error ?? speech.error}</p>}
     </form>
+  );
+}
+
+function LiarNotice() {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  return (
+    <button type="button" className={styles.liar} onClick={() => setDismissed(true)} aria-label="あなたはこのラウンドのライアーです。通知を閉じる">
+      🤫 このラウンドのお題はあなたが登録したものです。ライアーだとバレないように振る舞おう！
+      <span className={styles.dismissHint}>タップで閉じる ×</span>
+    </button>
   );
 }
 
@@ -81,7 +109,8 @@ function QuestionAnswering() {
   const [config, setConfig] = useState<Config>();
   const [playNotifySound] = useSound(notificationSound);
   const prevLengthRef = useRef(0);
-  const endRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLUListElement>(null);
+  const followLatest = useRef(true);
   usePageTitle("質問タイム");
 
   const info = sceneInfoOf(scene, "QuestionAnswering");
@@ -95,12 +124,27 @@ function QuestionAnswering() {
     void fetchConfig();
   }, []);
 
-  // 履歴が増えたら振動・効果音・スクロールで知らせる
+  // 投稿前に最下部にいたときだけ追従する。入力欄とは別のスクロール領域にする。
+  useLayoutEffect(() => {
+    const timeline = timelineRef.current;
+    if (timeline && followLatest.current) timeline.scrollTop = timeline.scrollHeight;
+  }, [histories.length]);
+
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+    const observer = new ResizeObserver(() => {
+      if (followLatest.current) timeline.scrollTop = timeline.scrollHeight;
+    });
+    observer.observe(timeline);
+    return () => observer.disconnect();
+  }, []);
+
+  // 履歴が増えたら振動・効果音で知らせる
   useEffect(() => {
     if (prevLengthRef.current > 0 && histories.length > prevLengthRef.current) {
       navigator.vibrate?.(100);
       playNotifySound();
-      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }
     prevLengthRef.current = histories.length;
   }, [histories.length, playNotifySound]);
@@ -128,9 +172,18 @@ function QuestionAnswering() {
           お題が分かったら、「解答」で答えてみてね！
         </p>
         <h3>テーマ: 「{scene?.theme}」</h3>
-        {info?.isLiar && <p className={styles.liar}>🤫 このラウンドのお題はあなたが登録したものです。ライアーだとバレないように振る舞おう！</p>}
+        {info?.isLiar && <LiarNotice key={`${scene?.id}:${scene?.round}`} />}
       </Card>
-      <ul className={styles.timeline}>
+      <ul
+        ref={timelineRef}
+        className={styles.timeline}
+        tabIndex={0}
+        aria-label="質問と解答の履歴"
+        onScroll={(event) => {
+          const timeline = event.currentTarget;
+          followLatest.current = timeline.scrollHeight - timeline.scrollTop - timeline.clientHeight <= 4;
+        }}
+      >
         {histories.map((history, index) => (
           <ChatBubble
             key={index}
@@ -144,7 +197,6 @@ function QuestionAnswering() {
           </ChatBubble>
         ))}
       </ul>
-      <div ref={endRef} />
       <div className={styles.inputArea}>
         <InputRow name="question" placeholder="質問（例: 生き物ですか？）" label="質問" remaining={(config?.questionLimit ?? 0) - myQuestions} submit={askQuestion} />
         <InputRow name="answer" placeholder="解答" label="解答" remaining={(config?.answerLimit ?? 0) - myAnswers} submit={submitAnswer} />

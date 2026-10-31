@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test:ui": "playwright test",
+    "test:ui:report": "playwright show-report",
     "gen:openapi": "dotnet build ../korenan.ApiService -p:OpenApiGenerateDocumentsOnBuild=true",
     "gen:api": "openapi-typescript openapi/korenan.ApiService.json -o src/api/schema.d.ts"
   },
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@babel/core": "^8.0.9",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.1",
     "@rolldown/plugin-babel": "^0.2.4",
     "@types/babel__core": "^7.20.5",
     "@types/dom-speech-recognition": "^0.0.12",

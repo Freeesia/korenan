@@ -1,4 +1,4 @@
-import { useActionState, useState } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { api, errorMessage, sceneInfoOf } from "../api/client";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -21,10 +21,27 @@ function WaitRoundStart() {
   const waiting = sceneInfoOf(scene, "WaitRound")?.waiting ?? 0;
   const total = scene?.players.length ?? 0;
 
-  const [error, startAction, isPending] = useActionState(async () => {
-    const { error } = await api.POST("/api/start");
-    return error ? errorMessage(error, "ラウンドを開始できませんでした") : undefined;
-  }, undefined);
+  const [error, setError] = useState<string>();
+  const [isPending, setIsPending] = useState(false);
+  const submitting = useRef(false);
+
+  // 長い送信をReact Actionにすると、SSEで始まる画面遷移もその完了を待ってしまう。
+  const startRound = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    setIsPending(true);
+    setError(undefined);
+    try {
+      const { error } = await api.POST("/api/start");
+      if (error) setError(errorMessage(error, "ラウンドを開始できませんでした"));
+    } catch {
+      setError("通信に失敗しました。接続を確認してください。");
+    } finally {
+      submitting.current = false;
+      setIsPending(false);
+    }
+  };
 
   return (
     <div className={page.page}>
@@ -41,7 +58,7 @@ function WaitRoundStart() {
       {isHost ? (
         <Card>
           <p>全てのプレイヤーがそろったら、「ラウンド開始」ボタンを押してゲームを始めましょう！</p>
-          <form action={startAction}>
+          <form onSubmit={startRound}>
             <Button type="submit" variant="primary" size="lg" block disabled={isPending || waiting < total}>
               {isPending ? "準備中…" : "ラウンド開始❗"}
             </Button>
