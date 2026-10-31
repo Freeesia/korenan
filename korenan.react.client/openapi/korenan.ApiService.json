@@ -931,6 +931,23 @@
           }
         }
       },
+      "LiarGuess": {
+        "required": [
+          "player",
+          "target"
+        ],
+        "type": "object",
+        "properties": {
+          "player": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "Player": {
         "required": [
           "id",
@@ -967,7 +984,10 @@
           "topic",
           "topicCorrectPlayers",
           "liarPlayers",
-          "liarCorrectPlayers"
+          "liarCorrectPlayers",
+          "scores",
+          "histories",
+          "liarGuesses"
         ],
         "type": "object",
         "properties": {
@@ -994,6 +1014,55 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "scores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoundScore"
+            }
+          },
+          "histories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryInfo"
+            }
+          },
+          "liarGuesses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiarGuess"
+            }
+          }
+        }
+      },
+      "RoundScore": {
+        "required": [
+          "player",
+          "topicPoints",
+          "liarPoints",
+          "noCorrectPoints"
+        ],
+        "type": "object",
+        "properties": {
+          "player": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topicPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "liarPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "noCorrectPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

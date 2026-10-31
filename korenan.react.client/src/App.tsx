@@ -33,7 +33,7 @@ function useSceneNavigation() {
     }
     if (scene === null) {
       if (!PUBLIC_PATHS.includes(path)) {
-        transitionTo(navigate, "/");
+        void navigate("/");
       }
       return;
     }
@@ -43,7 +43,8 @@ function useSceneNavigation() {
     const player = scene.players.find((p) => p.id === user.id);
     const target = `/${scene.scene === "WaitRoundStart" ? (player?.currentScene ?? "RegisterTopic") : scene.scene}`;
     if (path !== target.toLowerCase()) {
-      transitionTo(navigate, target);
+      // SSEの画面更新ではスナップショットのアニメーションを重ねず、進行をすぐ反映する。
+      void navigate(target);
     }
   }, [scene, user, pathname, navigate]);
 }

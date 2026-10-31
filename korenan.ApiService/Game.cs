@@ -83,13 +83,21 @@ public record Player(
 /// <param name="Liars">ライアープレイヤー</param>
 /// <param name="Histories">履歴</param>
 /// <param name="LiarGuesses">ライアープレイヤーの推理</param>
+/// <param name="ScoringConfig">ラウンド開始時の得点設定</param>
 [MessagePackObject]
 public record Round(
     [property: Key(0)] string Topic,
     [property: Key(1)] string TopicInfo,
     [property: Key(2)] ImmutableArray<Guid> Liars,
     [property: Key(3)] ImmutableArray<HistoryInfo> Histories,
-    [property: Key(4)] ImmutableArray<LiarGuess> LiarGuesses);
+    [property: Key(4)] ImmutableArray<LiarGuess> LiarGuesses,
+    [property: Key(5)] Config? ScoringConfig = null);
+
+/// <summary>プレイヤーのラウンドごとの得点内訳</summary>
+public record RoundScore(Guid Player, int TopicPoints, int LiarPoints, int NoCorrectPoints)
+{
+    public int Total => TopicPoints + LiarPoints + NoCorrectPoints;
+}
 
 /// <summary>
 /// ライアープレイヤーを推理する対象
@@ -225,6 +233,19 @@ static class GameExtensions
             .Where(x => x.Result == AnswerResultType.Correct)
             .Select(x => x.Player)
             .Distinct();
+
+    /// <summary>集計と結果表示で共通の得点内訳を取得する</summary>
+    public static RoundScore[] GetScores(this Round round, Game game)
+    {
+        var config = round.ScoringConfig ?? game.Config;
+        var hasCorrect = round.GetCorrectPlayers().Any();
+        return [.. game.Players.Select(player => new RoundScore(
+            player.Id,
+            round.Histories.Select(h => h.Result).OfType<AnswerResult>()
+                .Count(a => a.Player == player.Id && a.Result == AnswerResultType.Correct) * config.CorrectPoint,
+            round.LiarGuesses.Count(g => g.Player == player.Id && round.Liars.Contains(g.Target)) * config.LiarPoint,
+            !hasCorrect && round.Liars.Contains(player.Id) ? config.NoCorrectPoint : 0))];
+    }
 
     /// <summary>
     /// プレイヤーの質問数を取得する

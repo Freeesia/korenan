@@ -161,18 +161,10 @@ static Game Finish(Game game)
     var points = game.Players.ToDictionary(p => p.Id, p => p.Points);
     foreach (var round in game.Rounds)
     {
-        // 誰もお題を当てられなかった場合、ライアーは正解者なしとしてポイントを獲得
-        if (!round.GetCorrectPlayers().Any())
+        // お題正解点は解答時に加算済み。残りの得点を表示と同じ内訳で集計する。
+        foreach (var score in round.GetScores(game))
         {
-            foreach (var liar in round.Liars.Where(points.ContainsKey))
-            {
-                points[liar] += game.Config.NoCorrectPoint;
-            }
-        }
-        // ライアーを当てた場合、正解者はポイントを獲得
-        foreach (var guess in round.LiarGuesses.Where(g => round.Liars.Contains(g.Target) && points.ContainsKey(g.Player)))
-        {
-            points[guess.Player] += game.Config.LiarPoint;
+            points[score.Player] += score.LiarPoints + score.NoCorrectPoints;
         }
     }
     return (game with { Players = [.. game.Players.Select(p => p with { Points = points[p.Id] })] }).WithScene(GameScene.GameEnd);
@@ -204,7 +196,7 @@ static async Task<Game> PrepareRound(GameStore store, GameAi ai, Game game, Canc
     var liars = game.Topics.Where(t => t.Value == topic).Select(t => t.Key).ToImmutableArray();
     return await store.Update(
         game.Id,
-        g => g.WithScene(GameScene.QuestionAnswering) with { Rounds = g.Rounds.Add(new(topic, topicInfo, liars, [], [])) },
+        g => g.WithScene(GameScene.QuestionAnswering) with { Rounds = g.Rounds.Add(new(topic, topicInfo, liars, [], [], g.Config)) },
         token);
 }
 
@@ -237,7 +229,10 @@ static CurrentScene ToCurrentScene(Game game, Guid userId) => new(
                 r.Topic,
                 [.. r.GetCorrectPlayers()],
                 [.. r.Liars],
-                [.. r.LiarGuesses.Where(t => r.Liars.Contains(t.Target)).Select(t => t.Player)]))]),
+                [.. r.LiarGuesses.Where(t => r.Liars.Contains(t.Target)).Select(t => t.Player)],
+                r.GetScores(game),
+                [.. r.Histories],
+                [.. r.LiarGuesses]))]),
         _ => new EmptySceneInfo(),
     });
 
@@ -465,7 +460,7 @@ api.MapPost("/answer", async Task<Results<Ok<AnswerResultType>, ProblemHttpResul
         }
         var updated = g.AddHistory(new(new AnswerResult(user.Id, input, res.Result), res.Reason, DateTime.UtcNow));
         return res.Result == AnswerResultType.Correct
-            ? updated.UpdatePlayer(user.Id, p => p with { Points = p.Points + g.Config.CorrectPoint })
+            ? updated.UpdatePlayer(user.Id, p => p with { Points = p.Points + (g.Rounds[^1].ScoringConfig ?? g.Config).CorrectPoint })
             : updated;
     }, CancellationToken.None);
     return TypedResults.Ok(res.Result);
@@ -622,6 +617,6 @@ record WaitRoundSceneInfo(int Waiting) : ISceneInfo;
 record TopicSelectingSceneInfo() : ISceneInfo;
 record QuestionAnsweringSceneInfo(IPlayerResult[] Histories, bool IsLiar) : ISceneInfo;
 record LiarGuessSceneInfo(string Topic, Guid[] TopicCorrectPlayers, Guid[] GuessedPlayers, HistoryInfo[] Histories) : ISceneInfo;
-record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers);
+record RoundResult(string Topic, Guid[] TopicCorrectPlayers, Guid[] LiarPlayers, Guid[] LiarCorrectPlayers, RoundScore[] Scores, HistoryInfo[] Histories, LiarGuess[] LiarGuesses);
 record GameEndInfo(RoundResult[] Results) : ISceneInfo;
 record EmptySceneInfo() : ISceneInfo;

@@ -1,4 +1,4 @@
-import { useActionState } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { api, errorMessage, sceneInfoOf } from "../api/client";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
@@ -18,10 +18,28 @@ function LiarGuess() {
   const info = sceneInfoOf(scene, "LiarGuess");
   const guessed = !!user && !!info?.guessedPlayers.includes(user.id);
 
-  const [error, formAction, isPending] = useActionState(async (_: string | undefined, formData: FormData) => {
-    const { error } = await api.POST("/api/guess", { body: String(formData.get("target") ?? "") });
-    return error ? errorMessage(error, "推理の送信に失敗しました") : undefined;
-  }, undefined);
+  const [error, setError] = useState<string>();
+  const [isPending, setIsPending] = useState(false);
+  const submitting = useRef(false);
+
+  // 最後の推理で次のお題の準備が始まっても、SSEの画面遷移を送信待ちにしない。
+  const guess = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitting.current || guessed) return;
+    const target = String(new FormData(event.currentTarget).get("target") ?? "");
+    submitting.current = true;
+    setIsPending(true);
+    setError(undefined);
+    try {
+      const { error } = await api.POST("/api/guess", { body: target });
+      if (error) setError(errorMessage(error, "推理の送信に失敗しました"));
+    } catch {
+      setError("通信に失敗しました。接続を確認してください。");
+    } finally {
+      submitting.current = false;
+      setIsPending(false);
+    }
+  };
 
   return (
     <div className={page.page}>
@@ -48,7 +66,7 @@ function LiarGuess() {
         {guessed ? (
           <p>推理済みです✅ 他のプレイヤーを待っています…</p>
         ) : (
-          <form action={formAction} className={form.form}>
+          <form onSubmit={guess} className={form.form}>
             <div className={styles.choices}>
               {scene?.players
                 .filter((player) => player.id !== user?.id)
